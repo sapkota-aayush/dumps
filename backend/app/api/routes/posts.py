@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.core.database import get_db
 from app.models.models import Post
 from app.schemas.schemas import PostCreate, PostUpdate, PostResponse, PostListResponse
@@ -9,10 +11,12 @@ import uuid
 from datetime import datetime
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 # Create a new post
 @router.post("/create", response_model=PostResponse)
-async def create_post(post: PostCreate, db: Session = Depends(get_db)):
+@limiter.limit("20/hour")
+async def create_post(request: Request, post: PostCreate, db: Session = Depends(get_db)):
     db_post = Post(**post.dict())
     db.add(db_post)
     db.commit()
@@ -21,7 +25,9 @@ async def create_post(post: PostCreate, db: Session = Depends(get_db)):
 
 # Get all posts (global feed)
 @router.get("/posts", response_model=PostListResponse)
+@limiter.limit("200/hour")
 async def get_posts(
+    request: Request,
     hashtag: Optional[str] = Query(None, description="Filter by hashtag"),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(10, ge=1, le=100, description="Posts per page"),
@@ -100,7 +106,9 @@ async def delete_post(
 
 # React to a post
 @router.post("/post/{post_id}/react")
+@limiter.limit("100/hour")
 async def react_to_post(
+    request: Request,
     post_id: int,
     reaction: str = Query(..., description="Reaction type"),
     token: str = Query(..., description="User token"),
