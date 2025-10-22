@@ -3,110 +3,126 @@ import { PostCard, Post } from "@/components/PostCard";
 import { PostForm } from "@/components/PostForm";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
-
-const STORAGE_KEY = "dumps_posts";
-const REACTIONS_KEY = "dumps_user_reactions";
-
-const loadPosts = (): Post[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed.map((post: any) => ({
-        ...post,
-        timestamp: new Date(post.timestamp),
-        hashtags: post.hashtags || [],
-      }));
-    }
-  } catch (error) {
-    console.error("Failed to load posts:", error);
-  }
-  return [];
-};
-
-const savePosts = (posts: Post[]) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-  } catch (error) {
-    console.error("Failed to save posts:", error);
-  }
-};
-
-const loadUserReactions = (): Record<string, keyof Post["reactions"]> => {
-  try {
-    const stored = localStorage.getItem(REACTIONS_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error("Failed to load reactions:", error);
-  }
-  return {};
-};
-
-const saveUserReactions = (reactions: Record<string, keyof Post["reactions"]>) => {
-  try {
-    localStorage.setItem(REACTIONS_KEY, JSON.stringify(reactions));
-  } catch (error) {
-    console.error("Failed to save reactions:", error);
-  }
-};
+import { apiService, Post as ApiPost } from "@/services/api";
+import { useToken } from "@/hooks/useToken";
 
 const Index = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<ApiPost[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [userReactions, setUserReactions] = useState<Record<string, keyof Post["reactions"]>>({});
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
-  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editingPost, setEditingPost] = useState<ApiPost | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { token, loading: tokenLoading } = useToken();
 
-  useEffect(() => {
-    setPosts(loadPosts());
-    setUserReactions(loadUserReactions());
-  }, []);
-
-  useEffect(() => {
-    savePosts(posts);
-  }, [posts]);
-
-  useEffect(() => {
-    saveUserReactions(userReactions);
-  }, [userReactions]);
-
-  const handleCreatePost = (content: string, author: string, isAnonymous: boolean, hashtags: string[], image?: string) => {
-    if (editingPost) {
-      // Update existing post
-      setPosts(posts.map(post => 
-        post.id === editingPost.id
-          ? { ...post, content, author, isAnonymous, hashtags, image }
-          : post
-      ));
-      setEditingPost(null);
-    } else {
-      // Create new post with unique anonymous ID
-      const uniqueAuthor = isAnonymous 
-        ? `Anon${Math.floor(1000 + Math.random() * 9000)}` 
-        : author;
+  // Load posts from API
+  const loadPosts = async (isInitialLoad = false) => {
+    try {
+      if (isInitialLoad) {
+        setLoading(true);
+      }
+      setError(null);
+      console.log("Loading posts...", { selectedHashtag, token });
+      const response = await apiService.getPosts(selectedHashtag || undefined);
+      console.log("Posts loaded successfully:", response);
       
-      const newPost: Post = {
-        id: Date.now().toString(),
-        content,
-        author: uniqueAuthor,
-        isAnonymous,
-        timestamp: new Date(),
-        hashtags,
-        image,
-        reactions: {
-          thumbsUp: 0,
-          heart: 0,
-          laugh: 0,
-          angry: 0,
-        },
-      };
-      setPosts([newPost, ...posts]);
+      // Smart update - only update if posts actually changed
+      setPosts(prevPosts => {
+        const newPosts = response.posts;
+        
+        // Check if posts are actually different
+        if (prevPosts.length !== newPosts.length) {
+          return newPosts;
+        }
+        
+        // Check if any post content changed
+        const hasChanges = prevPosts.some((prevPost, index) => {
+          const newPost = newPosts[index];
+          if (!newPost) return true;
+          
+          return (
+            prevPost.id !== newPost.id ||
+            prevPost.content !== newPost.content ||
+            JSON.stringify(prevPost.reactions) !== JSON.stringify(newPost.reactions) ||
+            prevPost.created_at !== newPost.created_at
+          );
+        });
+        
+        return hasChanges ? newPosts : prevPosts;
+      });
+    } catch (err) {
+      console.error("Failed to load posts:", err);
+      setError(`Failed to load posts: ${err.message}`);
+    } finally {
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   };
 
-  const handleEditPost = (postId: string) => {
+  useEffect(() => {
+    if (!tokenLoading && token) {
+      loadPosts(true); // Initial load with loading spinner
+    }
+  }, [token, tokenLoading, selectedHashtag]);
+
+  // Real-time updates - poll every 5 seconds (silent updates)
+  useEffect(() => {
+    if (!token) return;
+    
+    const interval = setInterval(() => {
+      loadPosts(false); // Silent update - no loading spinner
+    }, 5000); // Poll every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [token, selectedHashtag]);
+
+  const handleCreatePost = async (content: string, author: string, isAnonymous: boolean, hashtags: string[], image?: string) => {
+    if (!token) {
+      setError("No token available. Please refresh the page.");
+      return;
+    }
+
+    try {
+      console.log("Creating/updating post...", { content, author, isAnonymous, hashtags, image, token });
+      
+      if (editingPost) {
+        // Update existing post
+        const updates = {
+          content,
+          fictional_name: isAnonymous ? "Anonymous" : author,
+        };
+        
+        console.log("Updating post:", editingPost.id, updates);
+        const updatedPost = await apiService.updatePost(editingPost.id, token, updates);
+        console.log("Post updated successfully:", updatedPost);
+        setPosts(posts.map(post => post.id === editingPost.id ? updatedPost : post));
+        setEditingPost(null);
+      } else {
+        // Create new post
+        const newPost = {
+          content,
+          hashtag: hashtags[0] || "general", // Use first hashtag or default
+          user_token: token,
+          fictional_name: isAnonymous ? "Anonymous" : author,
+          image_url: image,
+        };
+        
+        console.log("Creating new post:", newPost);
+        const createdPost = await apiService.createPost(newPost);
+        console.log("Post created successfully:", createdPost);
+        setPosts([createdPost, ...posts]);
+      }
+      
+      setIsFormOpen(false);
+    } catch (err) {
+      console.error("Failed to save post:", err);
+      setError(`Failed to save post: ${err.message}`);
+    }
+  };
+
+  const handleEditPost = (postId: number) => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       setEditingPost(post);
@@ -114,59 +130,65 @@ const Index = () => {
     }
   };
 
-  const handleDeletePost = (postId: string) => {
-    setPosts(posts.filter(p => p.id !== postId));
-    // Also remove user reaction for this post
-    const newReactions = { ...userReactions };
-    delete newReactions[postId];
-    setUserReactions(newReactions);
+  const handleDeletePost = async (postId: number) => {
+    if (!token) {
+      setError("No token available. Please refresh the page.");
+      return;
+    }
+
+    try {
+      await apiService.deletePost(postId, token);
+      setPosts(posts.filter(p => p.id !== postId));
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      setError("Failed to delete post. Please try again.");
+    }
   };
 
-  const handleReact = (postId: string, reaction: keyof Post["reactions"]) => {
-    const currentReaction = userReactions[postId];
-
-    // Update user reactions
-    const newUserReactions = { ...userReactions };
-    if (currentReaction === reaction) {
-      // User clicked same reaction - remove it
-      delete newUserReactions[postId];
-    } else {
-      // User clicked different reaction - replace it
-      newUserReactions[postId] = reaction;
+  const handleReact = async (postId: number, reaction: keyof ApiPost["reactions"]) => {
+    if (!token) {
+      console.error("No token available for reaction");
+      return;
     }
-    setUserReactions(newUserReactions);
-
-    // Update post reactions
-    setPosts(
-      posts.map((post) => {
-        if (post.id !== postId) return post;
-
-        const newReactions = { ...post.reactions };
-
-        // Remove previous reaction if exists
-        if (currentReaction) {
-          newReactions[currentReaction] = Math.max(0, newReactions[currentReaction] - 1);
-        }
-
-        // Add new reaction if not removing
-        if (currentReaction !== reaction) {
-          newReactions[reaction] = newReactions[reaction] + 1;
-        }
-
-        return { ...post, reactions: newReactions };
-      })
-    );
+    
+    console.log("Reacting to post:", { postId, reaction, token });
+    
+    try {
+      const updatedPost = await apiService.reactToPost(postId, reaction, token);
+      console.log("Reaction successful:", updatedPost);
+      console.log("Current posts before update:", posts);
+      
+      setPosts(prevPosts => {
+        const newPosts = prevPosts.map(post => 
+          post.id === postId ? updatedPost : post
+        );
+        console.log("Updated posts:", newPosts);
+        return newPosts;
+      });
+    } catch (err) {
+      console.error("Failed to react to post:", err);
+      setError("Failed to react to post. Please try again.");
+    }
   };
 
   // Get all unique hashtags from posts
   const allHashtags = Array.from(
-    new Set(posts.flatMap((post) => post.hashtags))
+    new Set(posts.map((post) => post.hashtag))
   ).sort();
 
-  // Filter posts by selected hashtag
-  const filteredPosts = selectedHashtag
-    ? posts.filter((post) => post.hashtags.includes(selectedHashtag))
-    : posts;
+  // Use posts directly - no conversion needed since PostCard expects API format
+  const convertedPosts = posts;
+
+  if (tokenLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,6 +202,22 @@ const Index = () => {
           </p>
         </div>
       </header>
+
+      {error && (
+        <div className="max-w-2xl mx-auto px-6 py-4">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
+            {error}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setError(null)}
+              className="ml-2"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {allHashtags.length > 0 && (
         <div className="max-w-2xl mx-auto px-6 py-4 border-b border-border">
@@ -217,7 +255,12 @@ const Index = () => {
 
       <main className="max-w-2xl mx-auto px-6 py-6">
         <div className="space-y-4">
-          {filteredPosts.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading posts...</p>
+            </div>
+          ) : convertedPosts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
                 {selectedHashtag
@@ -230,15 +273,15 @@ const Index = () => {
               </Button>
             </div>
           ) : (
-            filteredPosts.map((post) => (
+            convertedPosts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
-                onReact={handleReact}
-                userReaction={userReactions[post.id]}
-                onHashtagClick={setSelectedHashtag}
-                onEdit={handleEditPost}
-                onDelete={handleDeletePost}
+                onReact={(postId, reaction) => handleReact(postId, reaction)}
+                onHashtagClick={(hashtag) => setSelectedHashtag(hashtag)}
+                onEdit={(postId) => handleEditPost(postId)}
+                onDelete={(postId) => handleDeletePost(postId)}
+                currentUserToken={token || ""}
               />
             ))
           )}
@@ -262,10 +305,10 @@ const Index = () => {
         onSubmit={handleCreatePost}
         editMode={!!editingPost}
         initialContent={editingPost?.content}
-        initialAuthor={editingPost?.author}
-        initialIsAnonymous={editingPost?.isAnonymous}
-        initialHashtags={editingPost?.hashtags}
-        initialImage={editingPost?.image}
+        initialAuthor={editingPost?.fictional_name}
+        initialIsAnonymous={editingPost?.fictional_name === "Anonymous"}
+        initialHashtags={editingPost ? [editingPost.hashtag] : []}
+        initialImage={editingPost?.image_url}
       />
     </div>
   );

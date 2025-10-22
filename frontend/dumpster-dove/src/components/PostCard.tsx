@@ -5,15 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 
 export interface Post {
-  id: string;
+  id: number;
   content: string;
-  author: string;
-  isAnonymous: boolean;
-  timestamp: Date;
-  hashtags: string[];
-  image?: string;
+  fictional_name: string;
+  hashtag: string;
+  created_at: string;
+  image_url?: string;
+  user_token: string;
   reactions: {
-    thumbsUp: number;
+    thumbs_up: number;
     heart: number;
     laugh: number;
     angry: number;
@@ -22,96 +22,118 @@ export interface Post {
 
 interface PostCardProps {
   post: Post;
-  onReact: (postId: string, reaction: keyof Post["reactions"]) => void;
-  userReaction?: keyof Post["reactions"] | null;
+  onReact: (postId: number, reaction: keyof Post["reactions"]) => void;
   onHashtagClick: (hashtag: string) => void;
-  onEdit: (postId: string) => void;
-  onDelete: (postId: string) => void;
+  onEdit: (postId: number) => void;
+  onDelete: (postId: number) => void;
+  currentUserToken: string;
 }
 
-export const PostCard = ({ post, onReact, userReaction, onHashtagClick, onEdit, onDelete }: PostCardProps) => {
+export const PostCard = ({ post, onReact, onHashtagClick, onEdit, onDelete, currentUserToken }: PostCardProps) => {
+  const isOwnPost = post.user_token === currentUserToken;
+  
+  // Try to parse the date properly
+  const formatDate = (dateString: string) => {
+    try {
+      // Handle different date formats
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        // If direct parsing fails, try ISO format
+        return formatDistanceToNow(new Date(dateString + 'Z'), { addSuffix: true });
+      }
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.error('Date parsing error:', error, 'Date string:', dateString);
+      return 'Unknown time';
+    }
+  };
   return (
     <Card className="p-5 shadow-card hover:shadow-card-hover transition-all duration-300 border border-border hover:border-primary/40 bg-card">
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-foreground">
-              {post.isAnonymous ? post.author : post.author}
+              {post.fictional_name}
             </span>
             <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(post.timestamp, { addSuffix: true })}
+              {post.created_at ? formatDate(post.created_at) : 'Unknown time'}
             </span>
           </div>
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => onEdit(post.id)}
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => onDelete(post.id)}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
-          </div>
+          {isOwnPost && (
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => onEdit(post.id)}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onDelete(post.id)}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
         
         <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
           {post.content}
         </p>
 
-        {post.image && (
+        {post.image_url && (
           <img 
-            src={post.image} 
+            src={post.image_url} 
             alt="Post image" 
             className="rounded-lg w-full max-h-48 object-cover"
           />
         )}
         
-        {post.hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {post.hashtags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => onHashtagClick(tag)}
-                className="text-xs px-3 py-1.5 rounded-md bg-secondary border border-border hover:border-primary/50 text-foreground hover:text-primary transition-all duration-200 font-medium"
-              >
-                #{tag}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onHashtagClick(post.hashtag)}
+            className="text-xs px-3 py-1.5 rounded-md bg-secondary border border-border hover:border-primary/50 text-foreground hover:text-primary transition-all duration-200 font-medium"
+          >
+            #{post.hashtag}
+          </button>
+        </div>
         
         <div className="flex items-center gap-4 pt-3">
           <ReactionButton
             emoji="👍"
-            count={post.reactions.thumbsUp}
-            onClick={() => onReact(post.id, "thumbsUp")}
-            isActive={userReaction === "thumbsUp"}
+            count={post.reactions.thumbs_up}
+            onClick={() => {
+              console.log("Thumbs up clicked for post:", post.id);
+              onReact(post.id, "thumbs_up");
+            }}
           />
           <ReactionButton
             emoji="❤️"
             count={post.reactions.heart}
-            onClick={() => onReact(post.id, "heart")}
-            isActive={userReaction === "heart"}
+            onClick={() => {
+              console.log("Heart clicked for post:", post.id);
+              onReact(post.id, "heart");
+            }}
           />
           <ReactionButton
             emoji="😂"
             count={post.reactions.laugh}
-            onClick={() => onReact(post.id, "laugh")}
-            isActive={userReaction === "laugh"}
+            onClick={() => {
+              console.log("Laugh clicked for post:", post.id);
+              onReact(post.id, "laugh");
+            }}
           />
           <ReactionButton
             emoji="😡"
             count={post.reactions.angry}
-            onClick={() => onReact(post.id, "angry")}
-            isActive={userReaction === "angry"}
+            onClick={() => {
+              console.log("Angry clicked for post:", post.id);
+              onReact(post.id, "angry");
+            }}
           />
         </div>
       </div>
