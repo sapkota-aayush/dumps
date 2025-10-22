@@ -9,7 +9,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Install dependencies
 echo "🔧 Installing dependencies..."
-sudo apt install -y python3.9 python3.9-pip python3.9-venv postgresql postgresql-contrib nginx git
+sudo apt install -y python3 python3-pip python3-venv postgresql postgresql-contrib nginx git
 
 # Install Node.js
 echo "📦 Installing Node.js..."
@@ -30,6 +30,11 @@ echo "Please enter a secure password for the database user 'dumps_user':"
 read -s DB_PASSWORD
 echo ""
 
+# Start PostgreSQL service
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# Create database and user
 sudo -u postgres psql -c "CREATE DATABASE dumps_db;"
 sudo -u postgres psql -c "CREATE USER dumps_user WITH PASSWORD '$DB_PASSWORD';"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE dumps_db TO dumps_user;"
@@ -40,12 +45,13 @@ echo "DATABASE_URL=postgresql://dumps_user:$DB_PASSWORD@localhost:5432/dumps_db"
 # Clone repository
 echo "📁 Cloning repository..."
 cd ~
+rm -rf dumps  # Remove existing directory
 git clone https://github.com/sapkota-aayush/dumps.git
 cd dumps
 
 # Set up backend
 echo "🐍 Setting up Python backend..."
-python3.9 -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 pip install -r backend/requirements.txt
 
@@ -63,13 +69,15 @@ echo "🔐 Environment file created with secure database credentials"
 echo "🚀 Starting backend server..."
 cd backend
 source ../venv/bin/activate
-python3.9 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
 
 # Set up Nginx
 echo "🌐 Setting up Nginx..."
+sudo systemctl start nginx
+sudo systemctl enable nginx
 sudo cp nginx.conf /etc/nginx/sites-available/dumps
 sudo ln -s /etc/nginx/sites-available/dumps /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
-echo "✅ Deployment complete! Your app should be running at http://your-ec2-ip"
+echo "✅ Deployment complete! Your app should be running at http://16.52.134.125"
