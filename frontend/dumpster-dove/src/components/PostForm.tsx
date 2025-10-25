@@ -142,9 +142,23 @@ export const PostForm = ({
 
   const handleCameraCapture = async () => {
     try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Camera is not supported on this device');
+        return;
+      }
+
+      // Check if we're on HTTPS or localhost
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        alert('Camera access requires HTTPS. Please use the secure version of the site.');
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
-          facingMode: 'environment' // Use back camera on mobile
+          facingMode: 'environment', // Use back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         } 
       });
       
@@ -152,13 +166,68 @@ export const PostForm = ({
       const video = document.createElement('video');
       video.srcObject = stream;
       video.play();
+      video.style.position = 'fixed';
+      video.style.top = '0';
+      video.style.left = '0';
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.zIndex = '9999';
+      video.style.objectFit = 'cover';
+      document.body.appendChild(video);
+      
+      // Create overlay with capture button
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+      overlay.style.zIndex = '10000';
+      overlay.style.display = 'flex';
+      overlay.style.flexDirection = 'column';
+      overlay.style.justifyContent = 'flex-end';
+      overlay.style.alignItems = 'center';
+      overlay.style.padding = '20px';
+      
+      const captureBtn = document.createElement('button');
+      captureBtn.textContent = 'Capture Photo';
+      captureBtn.style.padding = '15px 30px';
+      captureBtn.style.fontSize = '18px';
+      captureBtn.style.backgroundColor = '#007bff';
+      captureBtn.style.color = 'white';
+      captureBtn.style.border = 'none';
+      captureBtn.style.borderRadius = '25px';
+      captureBtn.style.cursor = 'pointer';
+      
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.padding = '15px 30px';
+      cancelBtn.style.fontSize = '18px';
+      cancelBtn.style.backgroundColor = '#6c757d';
+      cancelBtn.style.color = 'white';
+      cancelBtn.style.border = 'none';
+      cancelBtn.style.borderRadius = '25px';
+      cancelBtn.style.cursor = 'pointer';
+      cancelBtn.style.marginTop = '10px';
+      
+      overlay.appendChild(captureBtn);
+      overlay.appendChild(cancelBtn);
+      document.body.appendChild(overlay);
       
       // Create a canvas to capture the image
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Wait for video to be ready
-      video.addEventListener('loadedmetadata', () => {
+      const cleanup = () => {
+        stream.getTracks().forEach(track => track.stop());
+        document.body.removeChild(video);
+        document.body.removeChild(overlay);
+      };
+      
+      cancelBtn.onclick = cleanup;
+      
+      captureBtn.onclick = () => {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         
@@ -174,6 +243,7 @@ export const PostForm = ({
             // Validate file size (5MB max)
             if (file.size > 5 * 1024 * 1024) {
               alert('Image size must be less than 5MB');
+              cleanup();
               return;
             }
             
@@ -181,14 +251,19 @@ export const PostForm = ({
             setImagePreview(URL.createObjectURL(blob));
           }
           
-          // Stop the camera stream
-          stream.getTracks().forEach(track => track.stop());
+          cleanup();
         }, 'image/jpeg', 0.8);
-      });
+      };
       
     } catch (error) {
       console.error('Camera access failed:', error);
-      alert('Camera access denied or not available');
+      if (error.name === 'NotAllowedError') {
+        alert('Camera access denied. Please allow camera access and try again.');
+      } else if (error.name === 'NotFoundError') {
+        alert('No camera found on this device.');
+      } else {
+        alert('Camera access failed: ' + error.message);
+      }
     }
   };
 
@@ -208,6 +283,13 @@ export const PostForm = ({
             value={content}
             onChange={(e) => setContent(e.target.value.slice(0, 280))}
             className="min-h-[100px] resize-none border focus-visible:ring-2 focus-visible:ring-ring p-3 text-base"
+            onKeyDown={(e) => {
+              // Auto-submit on mobile when user presses "Done" or "Enter"
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
           />
 
           {imagePreview && (
@@ -265,7 +347,18 @@ export const PostForm = ({
               <span className={`text-sm ${remainingChars < 20 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                 {remainingChars}
               </span>
-              <Button type="submit" disabled={!content.trim() || remainingChars < 0 || uploading} size="sm" className="rounded-full">
+              <Button 
+                type="submit" 
+                disabled={!content.trim() || remainingChars < 0 || uploading} 
+                size="sm" 
+                className="rounded-full min-w-[80px] h-10 text-sm font-medium"
+                onClick={(e) => {
+                  // For mobile, also handle click events
+                  if (content.trim() && remainingChars >= 0 && !uploading) {
+                    handleSubmit(e);
+                  }
+                }}
+              >
                 {uploading ? (
                   <>
                     <Upload className="w-4 h-4 mr-2 animate-spin" />
