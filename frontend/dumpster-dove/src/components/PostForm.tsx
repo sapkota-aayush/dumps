@@ -144,13 +144,22 @@ export const PostForm = ({
     try {
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera is not supported on this device');
+        alert('Camera is not supported on this device or browser. Please use a modern browser with camera support.');
         return;
       }
 
       // Check if we're on HTTPS or localhost
       if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        alert('Camera access requires HTTPS. Please use the secure version of the site.');
+        alert('Camera access requires HTTPS. For now, you can use the file upload option instead.');
+        return;
+      }
+
+      // Check if device has camera capabilities
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
+      
+      if (!hasVideoDevice) {
+        alert('No camera found on this device. Please use the file upload option instead.');
         return;
       }
 
@@ -330,7 +339,7 @@ export const PostForm = ({
                 size="icon"
                 className="h-9 w-9"
                 onClick={handleCameraCapture}
-                title="Take Photo"
+                title="Take Photo (requires camera and HTTPS)"
               >
                 <Camera className="h-5 w-5 text-primary" />
               </Button>
