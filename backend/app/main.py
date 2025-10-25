@@ -25,12 +25,19 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware for frontend
+# CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
-    allow_credentials=False,  # Disable credentials for development
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
+    allow_origins=[
+        "http://16.52.134.125:8080",  # Frontend on port 8080
+        "http://localhost:8080",      # Local frontend
+        "http://172.31.39.166:8080",  # Internal network
+        "http://localhost:5173",      # Vite default port
+        "http://localhost:3000"       # Alternative port
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 # Include routers
