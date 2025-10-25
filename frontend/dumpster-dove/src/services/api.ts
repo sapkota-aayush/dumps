@@ -173,6 +173,44 @@ class ApiService {
     console.log('Image uploaded successfully:', data);
     return data;
   }
+
+  // S3 Upload functionality
+  async uploadImageToS3(file: File): Promise<string> {
+    try {
+      console.log('Starting S3 upload for file:', file.name);
+      
+      // Step 1: Get presigned URL from backend
+      const presignedResponse = await this.request('/upload/presigned-url', {
+        method: 'POST',
+        body: JSON.stringify({
+          filename: file.name,
+          content_type: file.type || 'image/jpeg'
+        })
+      });
+
+      console.log('Got presigned URL:', presignedResponse);
+      const { upload_url, image_url } = presignedResponse as { upload_url: string; image_url: string };
+
+      // Step 2: Upload directly to S3
+      const uploadResponse = await fetch(upload_url, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type || 'image/jpeg'
+        }
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`S3 upload failed: ${uploadResponse.statusText}`);
+      }
+
+      console.log('S3 upload successful, image URL:', image_url);
+      return image_url;
+    } catch (error) {
+      console.error('S3 upload failed:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiService = new ApiService();

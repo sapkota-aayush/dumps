@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Image as ImageIcon, X, Upload } from "lucide-react";
+import { Image as ImageIcon, X, Upload, Camera } from "lucide-react";
 import { apiService } from "@/services/api";
 
 interface PostFormProps {
@@ -83,14 +83,15 @@ export const PostForm = ({
       
       let imageUrl = imagePreview;
       
-      // Upload image if a new file is selected
+      // Upload image to S3 if a new file is selected
       if (selectedFile) {
         try {
           setUploading(true);
-          const uploadResult = await apiService.uploadImage(selectedFile);
-          imageUrl = uploadResult.image_url;
+          console.log('Uploading image to S3:', selectedFile.name);
+          imageUrl = await apiService.uploadImageToS3(selectedFile);
+          console.log('S3 upload successful, image URL:', imageUrl);
         } catch (error) {
-          console.error("Failed to upload image:", error);
+          console.error("Failed to upload image to S3:", error);
           // Continue without image if upload fails
         } finally {
           setUploading(false);
@@ -133,6 +134,58 @@ export const PostForm = ({
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCameraCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment' // Use back camera on mobile
+        } 
+      });
+      
+      // Create a video element to show camera feed
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      // Create a canvas to capture the image
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Wait for video to be ready
+      video.addEventListener('loadedmetadata', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw the video frame to canvas
+        ctx?.drawImage(video, 0, 0);
+        
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            // Create a file from the blob
+            const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+            
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+              alert('Image size must be less than 5MB');
+              return;
+            }
+            
+            setSelectedFile(file);
+            setImagePreview(URL.createObjectURL(blob));
+          }
+          
+          // Stop the camera stream
+          stream.getTracks().forEach(track => track.stop());
+        }, 'image/jpeg', 0.8);
+      });
+      
+    } catch (error) {
+      console.error('Camera access failed:', error);
+      alert('Camera access denied or not available');
     }
   };
 
@@ -186,6 +239,16 @@ export const PostForm = ({
                   <ImageIcon className="h-5 w-5 text-primary" />
                 </Button>
               </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleCameraCapture}
+                title="Take Photo"
+              >
+                <Camera className="h-5 w-5 text-primary" />
+              </Button>
               <Input
                 id="image-upload"
                 type="file"
