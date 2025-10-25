@@ -81,7 +81,7 @@ export const PostForm = ({
         .map(tag => tag.trim().replace(/^#/, ""))
         .filter(tag => tag.length > 0);
       
-      let imageUrl = imagePreview;
+      let imageUrl: string | undefined = undefined;
       
       // Upload image to S3 if a new file is selected
       if (selectedFile) {
@@ -96,6 +96,9 @@ export const PostForm = ({
         } finally {
           setUploading(false);
         }
+      } else if (imagePreview && imagePreview.startsWith('http')) {
+        // Only use imagePreview if it's already an S3 URL (not base64)
+        imageUrl = imagePreview;
       }
       
       onSubmit(content, author, authorType === "anonymous", hashtags, imageUrl || undefined);
