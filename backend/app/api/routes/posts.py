@@ -11,9 +11,30 @@ import uuid
 import os
 import shutil
 from datetime import datetime
+import boto3
+from pydantic import BaseModel
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
+
+# S3 client setup
+def get_s3_client():
+    return boto3.client(
+        's3',
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        region_name=os.getenv('AWS_REGION')
+    )
+
+# Pydantic model for presigned URL request
+class PresignedUrlRequest(BaseModel):
+    filename: str
+    content_type: str = "image/jpeg"
+
+# Pydantic model for presigned URL response
+class PresignedUrlResponse(BaseModel):
+    upload_url: str
+    image_url: str
 
 # Create a new post
 @router.post("/create", response_model=PostResponse)
@@ -190,4 +211,40 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
     # Return the URL path
     image_url = f"/uploads/{unique_filename}"
     return {"image_url": image_url, "message": "Image uploaded successfully"}
+
+# Get presigned URL for S3 upload
+@router.post("/upload/presigned-url", response_model=PresignedUrlResponse)
+@limiter.limit("50/hour")
+async def get_presigned_url(request: Request, presigned_request: PresignedUrlRequest):
+    """Generate a presigned URL for direct S3 upload"""
+    try:
+        s3_client = get_s3_client()
+        bucket_name = os.getenv('S3_BUCKET_NAME')
+        
+        # Generate unique filename
+        file_extension = os.path.splitext(presigned_request.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        s3_key = f"images/{unique_filename}"
+        
+        # Generate presigned URL for PUT operation
+        presigned_url = s3_client.generate_presigned_url(
+            'put_object',
+            Params={
+                'Bucket': bucket_name,
+                'Key': s3_key,
+                'ContentType': presigned_request.content_type
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+        
+        # Generate the public URL for the uploaded file
+        image_url = f"https://{bucket_name}.s3.{os.getenv('AWS_REGION')}.amazonaws.com/{s3_key}"
+        
+        return PresignedUrlResponse(
+            upload_url=presigned_url,
+            image_url=image_url
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate presigned URL: {str(e)}")
 
