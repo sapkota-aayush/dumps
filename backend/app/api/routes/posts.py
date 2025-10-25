@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, File, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from slowapi import Limiter
@@ -8,6 +8,8 @@ from app.models.models import Post
 from app.schemas.schemas import PostCreate, PostUpdate, PostResponse, PostListResponse
 from typing import List, Optional
 import uuid
+import os
+import shutil
 from datetime import datetime
 
 router = APIRouter()
@@ -25,12 +27,11 @@ async def create_post(request: Request, post: PostCreate, db: Session = Depends(
 
 # Get all posts (global feed)
 @router.get("/posts", response_model=PostListResponse)
-@limiter.limit("200/hour")
 async def get_posts(
     request: Request,
     hashtag: Optional[str] = Query(None, description="Filter by hashtag"),
     page: int = Query(1, ge=1, description="Page number"),
-    limit: int = Query(10, ge=1, le=100, description="Posts per page"),
+    limit: int = Query(20, ge=1, le=100, description="Posts per page"),
     db: Session = Depends(get_db)
 ):
     query = db.query(Post)
@@ -53,7 +54,7 @@ async def get_posts(
 async def get_my_posts(
     token: str = Query(..., description="User token"),
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
     query = db.query(Post).filter(Post.user_token == token)
@@ -156,4 +157,37 @@ async def react_to_post(
     
     print(f"Final reactions: {db_post.reactions}")
     return db_post
+
+# Upload image
+@router.post("/upload-image")
+@limiter.limit("10/hour")
+async def upload_image(request: Request, file: UploadFile = File(...)):
+    """Upload an image file and return the URL"""
+    # Validate file type
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Validate file size (max 5MB)
+    file_size = 0
+    content = await file.read()
+    file_size = len(content)
+    if file_size > 5 * 1024 * 1024:  # 5MB
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = "uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename)[1] if file.filename else '.jpg'
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    file_path = os.path.join(upload_dir, unique_filename)
+    
+    # Save the file
+    with open(file_path, "wb") as buffer:
+        buffer.write(content)
+    
+    # Return the URL path
+    image_url = f"/uploads/{unique_filename}"
+    return {"image_url": image_url, "message": "Image uploaded successfully"}
 

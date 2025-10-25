@@ -105,7 +105,7 @@ class ApiService {
     });
   }
 
-  async getPosts(hashtag?: string, page: number = 1, limit: number = 10): Promise<PostListResponse> {
+  async getPosts(hashtag?: string, page: number = 1, limit: number = 20): Promise<PostListResponse> {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -150,6 +150,28 @@ class ApiService {
     return this.request<Post>(`/post/${postId}/react?${params.toString()}`, {
       method: 'POST',
     });
+  }
+
+  async uploadImage(file: File): Promise<{ image_url: string; message: string }> {
+    console.log('API: Uploading image', { fileName: file.name, fileSize: file.size, fileType: file.type });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`${API_BASE_URL}/upload-image`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Image upload error:', errorText);
+      throw new Error(`Image upload failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Image uploaded successfully:', data);
+    return data;
   }
 }
 

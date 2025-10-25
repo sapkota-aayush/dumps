@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PostCard, Post } from "@/components/PostCard";
 import { PostForm } from "@/components/PostForm";
 import { Button } from "@/components/ui/button";
@@ -12,57 +12,128 @@ const Index = () => {
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState<ApiPost | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   
   const { token, loading: tokenLoading } = useToken();
 
   // Load posts from API
-  const loadPosts = async (isInitialLoad = false) => {
+  const loadPosts = async (isInitialLoad = false, page = 1, isPolling = false) => {
     try {
       if (isInitialLoad) {
         setLoading(true);
+        setCurrentPage(1);
+        setHasMore(true);
+      } else if (!isPolling) {
+        setLoadingMore(true);
       }
       setError(null);
-      console.log("Loading posts...", { selectedHashtag, token });
-      const response = await apiService.getPosts(selectedHashtag || undefined);
+      console.log("Loading posts...", { selectedHashtag, token, page, isPolling });
+      const response = await apiService.getPosts(selectedHashtag || undefined, page);
       console.log("Posts loaded successfully:", response);
       
-      // Smart update - only update if posts actually changed
-      setPosts(prevPosts => {
-        const newPosts = response.posts;
-        
-        // Check if posts are actually different
-        if (prevPosts.length !== newPosts.length) {
-          return newPosts;
-        }
-        
-        // Check if any post content changed
-        const hasChanges = prevPosts.some((prevPost, index) => {
-          const newPost = newPosts[index];
-          if (!newPost) return true;
+      if (isInitialLoad) {
+        setPosts(response.posts);
+      } else if (isPolling) {
+        // For polling, only update if there are new posts
+        setPosts(prevPosts => {
+          const existingIds = new Set(prevPosts.map(p => p.id));
+          const newPosts = response.posts.filter(post => !existingIds.has(post.id));
           
-          return (
-            prevPost.id !== newPost.id ||
-            prevPost.content !== newPost.content ||
-            JSON.stringify(prevPost.reactions) !== JSON.stringify(newPost.reactions) ||
-            prevPost.created_at !== newPost.created_at
-          );
+          // Only update if there are actually new posts
+          if (newPosts.length > 0) {
+            console.log("New posts found during polling:", newPosts.length);
+            return [...newPosts, ...prevPosts];
+          }
+          
+          // Check for updated posts (reactions, etc.)
+          const hasUpdates = response.posts.some(newPost => {
+            const existingPost = prevPosts.find(p => p.id === newPost.id);
+            return existingPost && (
+              existingPost.reactions !== newPost.reactions ||
+              existingPost.content !== newPost.content
+            );
+          });
+          
+          if (hasUpdates) {
+            console.log("Posts updated during polling");
+            return response.posts;
+          }
+          
+          return prevPosts; // No changes
         });
-        
-        return hasChanges ? newPosts : prevPosts;
-      });
+      } else {
+        // For pagination, append new posts
+        setPosts(prevPosts => {
+          const existingIds = new Set(prevPosts.map(p => p.id));
+          const newPosts = response.posts.filter(post => !existingIds.has(post.id));
+          return [...prevPosts, ...newPosts];
+        });
+      }
+      
+      // Check if there are more posts to load
+      setHasMore(response.posts.length === 20); // 20 is our page size
+      setCurrentPage(page);
     } catch (err) {
       console.error("Failed to load posts:", err);
       setError(`Failed to load posts: ${err.message}`);
     } finally {
       if (isInitialLoad) {
         setLoading(false);
+      } else if (!isPolling) {
+        setLoadingMore(false);
       }
     }
   };
 
+  // Load more posts for infinite scroll
+  const loadMorePosts = useCallback(() => {
+    if (!loadingMore && hasMore && !loading) {
+      console.log("Loading more posts...", { currentPage, hasMore, loadingMore });
+      loadPosts(false, currentPage + 1);
+    }
+  }, [loadingMore, hasMore, currentPage, loading]);
+
+  // Infinite scroll detection with throttling
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const handleScroll = () => {
+      // Clear previous timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Throttle scroll events
+      timeoutId = setTimeout(() => {
+        const scrollTop = document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = document.documentElement.clientHeight;
+        
+        // Load more when user is 200px from bottom
+        if (scrollTop + clientHeight >= scrollHeight - 200) {
+          loadMorePosts();
+        }
+      }, 100); // 100ms throttle
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [loadMorePosts]);
+
   useEffect(() => {
     if (!tokenLoading && token) {
+      // Reset pagination when hashtag changes
+      setCurrentPage(1);
+      setHasMore(true);
+      setPosts([]);
       loadPosts(true); // Initial load with loading spinner
     }
   }, [token, tokenLoading, selectedHashtag]);
@@ -72,8 +143,9 @@ const Index = () => {
     if (!token) return;
     
     const interval = setInterval(() => {
-      loadPosts(false); // Silent update - no loading spinner
-    }, 5000); // Poll every 5 seconds
+      // Only poll for new posts, not pagination
+      loadPosts(false, 1, true); // Always check page 1 for new posts, isPolling=true
+    }, 10000); // Poll every 10 seconds
     
     return () => clearInterval(interval);
   }, [token, selectedHashtag]);
@@ -284,6 +356,34 @@ const Index = () => {
                 currentUserToken={token || ""}
               />
             ))
+          )}
+          
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="flex justify-center py-6">
+              <Button
+                onClick={loadMorePosts}
+                disabled={loadingMore}
+                variant="outline"
+                className="px-8"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                    Loading more posts...
+                  </>
+                ) : (
+                  "Load More Posts"
+                )}
+              </Button>
+            </div>
+          )}
+          
+          {/* End of posts message */}
+          {!hasMore && posts.length > 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>You've reached the end! No more posts to load.</p>
+            </div>
           )}
         </div>
       </main>

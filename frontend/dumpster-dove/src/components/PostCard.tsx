@@ -4,6 +4,18 @@ import { ReactionButton } from "./ReactionButton";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 
+const getImageUrl = (imageUrl: string) => {
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+  // For local development
+  if (process.env.NODE_ENV === 'development') {
+    return `http://localhost:8000${imageUrl}`;
+  }
+  // For production
+  return `https://16.52.134.125${imageUrl}`;
+};
+
 export interface Post {
   id: number;
   content: string;
@@ -86,11 +98,14 @@ export const PostCard = ({ post, onReact, onHashtagClick, onEdit, onDelete, curr
         </p>
 
         {post.image_url && (
-          <img 
-            src={post.image_url} 
-            alt="Post image" 
-            className="rounded-lg w-full max-h-48 object-cover"
-          />
+          <div className="mt-3 rounded-lg overflow-hidden border border-border">
+            <img 
+              src={getImageUrl(post.image_url)} 
+              alt="Post image" 
+              className="w-full h-auto max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => window.open(getImageUrl(post.image_url), '_blank')}
+            />
+          </div>
         )}
         
         <div className="flex flex-wrap gap-2">

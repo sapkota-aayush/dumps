@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.api.routes import posts
 from app.core.database import engine
 from app.models.models import Base
+import os
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -25,15 +27,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8081",  # Development frontend
-        "https://16.52.134.125",  # Production frontend (EC2 IP)
-        "https://dumps.online",   # Future domain
-        "https://www.dumps.online"  # Future domain with www
-    ],
-    allow_credentials=True,  # Enable credentials for production
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=False,  # Disable credentials for development
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Include routers
@@ -43,6 +40,11 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 from app.api.routes import auth
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 
+# Serve uploaded images
+uploads_path = os.path.join(os.path.dirname(__file__), "..", "uploads")
+if os.path.exists(uploads_path):
+    app.mount("/uploads", StaticFiles(directory=uploads_path), name="uploads")
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to Dumps API"}
@@ -50,4 +52,9 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+# Handle OPTIONS requests for CORS
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    return {"message": "OK"}
 

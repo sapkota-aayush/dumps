@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Image as ImageIcon, X } from "lucide-react";
+import { Image as ImageIcon, X, Upload } from "lucide-react";
+import { apiService } from "@/services/api";
 
 interface PostFormProps {
   open: boolean;
@@ -37,6 +38,8 @@ export const PostForm = ({
   const [fictionalName, setFictionalName] = useState(initialIsAnonymous ? "" : initialAuthor);
   const [hashtagInput, setHashtagInput] = useState(initialHashtags.join(" "));
   const [imagePreview, setImagePreview] = useState<string | null>(initialImage || null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Update state when dialog opens or closes
@@ -67,7 +70,7 @@ export const PostForm = ({
     }
   }, [open, editMode, initialContent, initialAuthor, initialIsAnonymous, initialHashtags, initialImage]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (content.trim()) {
       const author = authorType === "anonymous" ? "Anonymous" : fictionalName.trim() || "Anonymous";
@@ -78,11 +81,28 @@ export const PostForm = ({
         .map(tag => tag.trim().replace(/^#/, ""))
         .filter(tag => tag.length > 0);
       
-      onSubmit(content, author, authorType === "anonymous", hashtags, imagePreview || undefined);
+      let imageUrl = imagePreview;
+      
+      // Upload image if a new file is selected
+      if (selectedFile) {
+        try {
+          setUploading(true);
+          const uploadResult = await apiService.uploadImage(selectedFile);
+          imageUrl = uploadResult.image_url;
+        } catch (error) {
+          console.error("Failed to upload image:", error);
+          // Continue without image if upload fails
+        } finally {
+          setUploading(false);
+        }
+      }
+      
+      onSubmit(content, author, authorType === "anonymous", hashtags, imageUrl || undefined);
       setContent("");
       setFictionalName("");
       setHashtagInput("");
       setImagePreview(null);
+      setSelectedFile(null);
       setAuthorType("anonymous");
       onOpenChange(false);
     }
@@ -93,6 +113,21 @@ export const PostForm = ({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+      
+      setSelectedFile(file);
+      
+      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -164,8 +199,15 @@ export const PostForm = ({
               <span className={`text-sm ${remainingChars < 20 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                 {remainingChars}
               </span>
-              <Button type="submit" disabled={!content.trim() || remainingChars < 0} size="sm" className="rounded-full">
-                {editMode ? "Update" : "Post"}
+              <Button type="submit" disabled={!content.trim() || remainingChars < 0 || uploading} size="sm" className="rounded-full">
+                {uploading ? (
+                  <>
+                    <Upload className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  editMode ? "Update" : "Post"
+                )}
               </Button>
             </div>
           </div>
