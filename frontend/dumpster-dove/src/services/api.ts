@@ -116,12 +116,12 @@ class ApiService {
       limit: limit.toString(),
     });
 
-    return this.request<PostListResponse>(`/mydumps?${params.toString()}`);
+    return this.request<PostListResponse>(`/api/posts/mydumps?${params.toString()}`);
   }
 
   async updatePost(postId: number, token: string, updates: PostUpdate): Promise<Post> {
     const params = new URLSearchParams({ token });
-    return this.request<Post>(`/post/${postId}?${params.toString()}`, {
+    return this.request<Post>(`/api/posts/post/${postId}?${params.toString()}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
@@ -129,7 +129,7 @@ class ApiService {
 
   async deletePost(postId: number, token: string): Promise<{ message: string }> {
     const params = new URLSearchParams({ token });
-    return this.request<{ message: string }>(`/post/${postId}?${params.toString()}`, {
+    return this.request<{ message: string }>(`/api/posts/post/${postId}?${params.toString()}`, {
       method: 'DELETE',
     });
   }
@@ -145,7 +145,7 @@ class ApiService {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch(`${API_BASE_URL}/upload-image`, {
+    const response = await fetch(`${API_BASE_URL}/api/posts/upload-image`, {
       method: 'POST',
       body: formData,
     });

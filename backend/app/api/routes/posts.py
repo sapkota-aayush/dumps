@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, File, UploadFile
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from app.core.database import get_db
@@ -135,15 +136,10 @@ async def react_to_post(
     token: str = Query(..., description="User token"),
     db: Session = Depends(get_db)
 ):
-    print(f"Reacting to post {post_id} with reaction {reaction} by user {token}")
-    
     db_post = db.query(Post).filter(Post.id == post_id).first()
     
     if not db_post:
-        print(f"Post {post_id} not found")
         raise HTTPException(status_code=404, detail="Post not found")
-    
-    print(f"Found post: {db_post.id}, current reactions: {db_post.reactions}")
     
     # Initialize reactions if not exists
     if not db_post.reactions:
@@ -153,29 +149,17 @@ async def react_to_post(
             "laugh": 0,
             "angry": 0
         }
-        print("Initialized reactions")
     
-    # For now, implement a simple toggle system (1 like per user per post)
-    # In a real app, you'd have a separate user_reactions table
+    # Simple increment - just add 1 to the reaction count
     current_count = db_post.reactions.get(reaction, 0)
-    new_reactions = db_post.reactions.copy()
+    db_post.reactions[reaction] = current_count + 1
     
-    # Simple toggle: if count is 0, make it 1; if 1 or more, make it 0
-    # This prevents unlimited likes but isn't perfect (multiple users can still like)
-    if current_count == 0:
-        new_reactions[reaction] = 1
-        print(f"Added reaction {reaction}: 0 -> 1")
-    else:
-        new_reactions[reaction] = 0
-        print(f"Removed reaction {reaction}: {current_count} -> 0")
-    
-    # Update the reactions field with a new dictionary to trigger SQLAlchemy change detection
-    db_post.reactions = new_reactions
+    # Mark the JSON field as modified so SQLAlchemy detects the change
+    flag_modified(db_post, "reactions")
     
     db.commit()
     db.refresh(db_post)
     
-    print(f"Final reactions: {db_post.reactions}")
     return db_post
 
 # Upload image
