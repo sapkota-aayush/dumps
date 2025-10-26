@@ -1,5 +1,5 @@
-const API_BASE_URL = process.env.VITE_API_URL || 'http://16.52.134.125:8000';
-const AUTH_BASE_URL = process.env.VITE_API_URL || 'http://16.52.134.125:8000';
+const API_BASE_URL = process.env.VITE_API_URL || 'https://dumps.online';
+const AUTH_BASE_URL = process.env.VITE_API_URL || 'https://dumps.online';
 
 export interface Post {
   id: number;
