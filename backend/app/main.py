@@ -12,6 +12,13 @@ import os
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+# Import and run the indexes script
+try:
+    from add_indexes import add_indexes
+    add_indexes()
+except Exception as e:
+    print(f"Warning: Could not add indexes: {e}")
+
 app = FastAPI(
     title="Dumps API",
     description="Backend API for Dumps.online - Anonymous social media platform",
@@ -31,6 +38,8 @@ app.add_middleware(
         "https://dumps.online",       # Production domain
         "http://16.52.134.125:8080",  # Frontend on port 8080
         "http://localhost:8080",      # Local frontend
+        "http://localhost:8081",      # Alternative frontend port
+        "http://localhost:8082",      # Alternative frontend port
         "http://172.31.39.166:8080",  # Internal network
         "http://localhost:5173",      # Vite default port
         "http://localhost:3000"       # Alternative port

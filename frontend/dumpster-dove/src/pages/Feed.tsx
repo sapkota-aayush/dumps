@@ -2,15 +2,18 @@ import { useState, useEffect, useCallback } from "react";
 import { PostCard, Post } from "@/components/PostCard";
 import { PostForm } from "@/components/PostForm";
 import { Button } from "@/components/ui/button";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Search, Home } from "lucide-react";
 import { apiService, Post as ApiPost } from "@/services/api";
 import { useToken } from "@/hooks/useToken";
 import { trackPageView } from "@/lib/analytics";
+import { BottomNav } from "@/components/BottomNav";
+import { cn } from "@/lib/utils";
 
 const Feed = () => {
   const [posts, setPosts] = useState<ApiPost[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [editingPost, setEditingPost] = useState<ApiPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -236,8 +239,34 @@ const Feed = () => {
     new Set(posts.map((post) => post.hashtag))
   ).sort();
 
-  // Use posts directly - no conversion needed since PostCard expects API format
-  const convertedPosts = posts;
+  // Handle hashtag search from bottom nav
+  const handleHashtagSearch = (term: string) => {
+    // Remove leading # if present
+    const cleanSearch = term.startsWith('#') ? term.slice(1) : term;
+    setSearchTerm(cleanSearch);
+    
+    // Check if we have any posts with matching hashtags
+    const matchingHashtags = allHashtags.filter(tag => 
+      tag.toLowerCase().includes(cleanSearch.toLowerCase())
+    );
+    
+    if (matchingHashtags.length > 0) {
+      // Set to the first matching hashtag
+      setSelectedHashtag(matchingHashtags[0]);
+    } else {
+      // No matching hashtag found, search in content instead
+      setSelectedHashtag(null);
+    }
+  };
+
+  // Filter posts based on search term (content and hashtag)
+  const filteredPosts = searchTerm ? posts.filter(post => 
+    post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    post.hashtag.toLowerCase().includes(searchTerm.toLowerCase())
+  ) : posts;
+
+  // Use filtered posts
+  const convertedPosts = filteredPosts;
 
   if (tokenLoading) {
     return (
@@ -279,13 +308,54 @@ const Feed = () => {
         </div>
       )}
 
+      {searchTerm && (
+        <div className="max-w-2xl mx-auto px-6 py-3">
+          <div className="bg-accent/50 border border-accent-foreground/20 px-4 py-3 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Search results for: "{searchTerm}"</span>
+              <span className="text-xs text-muted-foreground">({filteredPosts.length} results)</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedHashtag(null);
+              }}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {selectedHashtag && !allHashtags.includes(selectedHashtag) && (
+        <div className="max-w-2xl mx-auto px-6 py-3">
+          <div className="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-lg flex items-center justify-between">
+            <span className="text-sm font-medium">Showing results for: #{selectedHashtag}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedHashtag(null)}
+              className="text-primary"
+            >
+              Clear filter
+            </Button>
+          </div>
+        </div>
+      )}
+
       {allHashtags.length > 0 && (
         <div className="max-w-2xl mx-auto px-6 py-4 border-b border-border">
           <div className="flex flex-wrap gap-2">
             <Button
-              variant={selectedHashtag === null ? "default" : "outline"}
+              variant={selectedHashtag === null && !searchTerm ? "default" : "outline"}
               size="sm"
-              onClick={() => setSelectedHashtag(null)}
+              onClick={() => {
+                setSelectedHashtag(null);
+                setSearchTerm("");
+              }}
             >
               All
             </Button>
@@ -313,7 +383,7 @@ const Feed = () => {
         </div>
       )}
 
-      <main className="max-w-2xl mx-auto px-6 py-6">
+      <main className="max-w-2xl mx-auto px-6 py-6 pb-28">
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-12">
@@ -321,16 +391,30 @@ const Feed = () => {
               <p className="text-muted-foreground">Loading posts...</p>
             </div>
           ) : convertedPosts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">
-                {selectedHashtag
+            <div className="text-center py-12 space-y-4">
+              <p className="text-muted-foreground">
+                {searchTerm
+                  ? `No posts found matching "${searchTerm}".`
+                  : selectedHashtag
                   ? `No posts with #${selectedHashtag} yet.`
                   : "No posts yet. Be the first to share!"}
               </p>
-              <Button onClick={() => setIsFormOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Post
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                {(selectedHashtag || searchTerm) && (
+                  <Button
+                    onClick={() => {
+                      setSelectedHashtag(null);
+                      setSearchTerm("");
+                    }}
+                  >
+                    ← Back to All Posts
+                  </Button>
+                )}
+                <Button variant={(selectedHashtag || searchTerm) ? "outline" : "default"} onClick={() => setIsFormOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Post
+                </Button>
+              </div>
             </div>
           ) : (
             convertedPosts.map((post) => (
@@ -376,13 +460,33 @@ const Feed = () => {
         </div>
       </main>
 
+      {/* Back to All button - only shown when search/filter is active */}
+      {(searchTerm || selectedHashtag) && (
+        <Button
+          onClick={() => {
+            setSearchTerm("");
+            setSelectedHashtag(null);
+          }}
+          className="fixed bottom-36 right-6 h-14 w-14 rounded-lg shadow-lg hover:shadow-xl bg-secondary hover:bg-secondary/90 hover:scale-110 transition-all duration-200 z-40"
+          size="icon"
+          title="Back to all posts"
+        >
+          <Home className="w-6 h-6" />
+        </Button>
+      )}
+
       <Button
         onClick={() => setIsFormOpen(true)}
-        className="fixed bottom-6 right-6 h-16 w-16 rounded-lg shadow-glow-lg hover:shadow-glow bg-primary hover:bg-primary/90 hover:scale-110 transition-all duration-200"
+        className={cn(
+          "fixed right-6 h-16 w-16 rounded-lg shadow-glow-lg hover:shadow-glow bg-primary hover:bg-primary/90 hover:scale-110 transition-all duration-200 z-40",
+          (searchTerm || selectedHashtag) ? "bottom-24" : "bottom-20"
+        )}
         size="icon"
       >
         <Plus className="w-7 h-7" />
       </Button>
+
+      <BottomNav onHashtagSearch={handleHashtagSearch} allHashtags={allHashtags} />
 
       <PostForm
         open={isFormOpen}

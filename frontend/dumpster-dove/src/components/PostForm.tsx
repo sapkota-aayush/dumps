@@ -5,9 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Image as ImageIcon, X, Upload, Camera } from "lucide-react";
+import { Image as ImageIcon, X, Upload, Camera, FileVideo, Search } from "lucide-react";
 import { apiService } from "@/services/api";
 import { trackPostCreated } from "@/lib/analytics";
+import { GifPicker } from "./GifPicker";
 
 interface PostFormProps {
   open: boolean;
@@ -41,6 +42,7 @@ export const PostForm = ({
   const [imagePreview, setImagePreview] = useState<string | null>(initialImage || null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [gifPickerOpen, setGifPickerOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Update state when dialog opens or closes
@@ -54,11 +56,8 @@ export const PostForm = ({
         setHashtagInput(initialHashtags.join(" "));
         setImagePreview(initialImage || null);
       }
-      // Focus textarea after dialog animation
-      const timer = setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 150);
-      return () => clearTimeout(timer);
+      // Don't auto-focus on mobile to avoid cursor jumping
+      // Users can tap to focus when needed
     } else {
       // Reset form when closing
       if (!editMode) {
@@ -182,7 +181,7 @@ export const PostForm = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mx-0 sm:mx-auto rounded-none sm:rounded-lg h-[100vh] sm:h-auto w-full sm:w-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">{editMode ? "Edit" : "New post"}</DialogTitle>
           <DialogDescription className="sr-only">
@@ -207,6 +206,7 @@ export const PostForm = ({
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck="false"
+            autoFocus={false}
           />
 
           {imagePreview && (
@@ -252,6 +252,16 @@ export const PostForm = ({
               >
                 <Camera className="h-5 w-5 text-primary" />
               </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => setGifPickerOpen(true)}
+                title="Search GIFs"
+              >
+                <FileVideo className="h-5 w-5 text-primary" />
+              </Button>
               <Input
                 id="image-upload"
                 type="file"
@@ -283,50 +293,53 @@ export const PostForm = ({
             </div>
           </div>
 
-          <details className="group">
-            <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground list-none flex items-center gap-1">
-              <span>Advanced options</span>
-              <span className="transition-transform group-open:rotate-180">▼</span>
-            </summary>
-            <div className="mt-3 space-y-3 pl-1">
-              <div>
-                <Label className="text-sm mb-2 block">Post as</Label>
-                <RadioGroup value={authorType} onValueChange={(value) => setAuthorType(value as "anonymous" | "fictional")} className="gap-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="anonymous" id="anonymous" />
-                    <Label htmlFor="anonymous" className="font-normal cursor-pointer text-sm">
-                      Anonymous
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="fictional" id="fictional" />
-                    <Label htmlFor="fictional" className="font-normal cursor-pointer text-sm">
-                      Fictional name
-                    </Label>
-                  </div>
-                </RadioGroup>
-                {authorType === "fictional" && (
-                  <Input
-                    placeholder="Enter name..."
-                    value={fictionalName}
-                    onChange={(e) => setFictionalName(e.target.value.slice(0, 30))}
-                    className="mt-2 h-9 text-sm"
-                  />
-                )}
-              </div>
-
-              <div>
-                <Label className="text-sm mb-2 block">Hashtags</Label>
+          <div className="space-y-3 pt-3 border-t">
+            <div>
+              <Label className="text-sm mb-2 block">Post as</Label>
+              <RadioGroup value={authorType} onValueChange={(value) => setAuthorType(value as "anonymous" | "fictional")} className="gap-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="anonymous" id="anonymous" />
+                  <Label htmlFor="anonymous" className="font-normal cursor-pointer text-sm">
+                    Anonymous
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fictional" id="fictional" />
+                  <Label htmlFor="fictional" className="font-normal cursor-pointer text-sm">
+                    Fictional name
+                  </Label>
+                </div>
+              </RadioGroup>
+              {authorType === "fictional" && (
                 <Input
-                  placeholder="college funny rant"
-                  value={hashtagInput}
-                  onChange={(e) => setHashtagInput(e.target.value)}
-                  className="h-9 text-sm"
+                  placeholder="Enter name..."
+                  value={fictionalName}
+                  onChange={(e) => setFictionalName(e.target.value.slice(0, 30))}
+                  className="mt-2 h-9 text-sm"
                 />
-              </div>
+              )}
             </div>
-          </details>
+
+            <div>
+              <Label className="text-sm mb-2 block">Hashtags</Label>
+              <Input
+                placeholder="college funny rant"
+                value={hashtagInput}
+                onChange={(e) => setHashtagInput(e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+          </div>
         </form>
+
+        <GifPicker
+          open={gifPickerOpen}
+          onOpenChange={setGifPickerOpen}
+          onSelect={(gifUrl) => {
+            setImagePreview(gifUrl);
+            setSelectedFile(null); // Clear any selected file
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

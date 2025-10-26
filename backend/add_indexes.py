@@ -8,7 +8,7 @@ from app.core.database import DATABASE_URL
 def add_indexes():
     engine = create_engine(DATABASE_URL)
     
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         # Add index on created_at for faster ordering
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC)"))
         
@@ -17,9 +17,8 @@ def add_indexes():
         
         # Add index on user_token for faster user post queries
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_posts_user_token ON posts(user_token)"))
-        
-        conn.commit()
-        print("✅ Database indexes added successfully!")
+    
+    print("✅ Database indexes added successfully!")
 
 if __name__ == "__main__":
     add_indexes()
