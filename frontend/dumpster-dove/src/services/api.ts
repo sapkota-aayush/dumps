@@ -95,7 +95,7 @@ class ApiService {
   // Posts
   async createPost(post: PostCreate): Promise<Post> {
     console.log('API: Creating post with data:', post);
-    return this.request<Post>('/create', {
+    return this.request<Post>('/api/posts/create', {
       method: 'POST',
       body: JSON.stringify(post),
     });
@@ -112,7 +112,7 @@ class ApiService {
     }
 
     console.log('API: Getting posts with params:', { hashtag, page, limit });
-    return this.request<PostListResponse>(`/posts?${params.toString()}`);
+    return this.request<PostListResponse>(`/api/posts/posts?${params.toString()}`);
   }
 
   async getMyPosts(token: string, page: number = 1, limit: number = 10): Promise<PostListResponse> {
@@ -176,7 +176,7 @@ class ApiService {
       console.log('Starting S3 upload for file:', file.name);
       
       // Step 1: Get presigned URL from backend
-      const presignedResponse = await this.request('/upload/presigned-url', {
+      const presignedResponse = await this.request('/api/posts/upload/presigned-url', {
         method: 'POST',
         body: JSON.stringify({
           filename: file.name,
