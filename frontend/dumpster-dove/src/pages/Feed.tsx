@@ -258,7 +258,7 @@ const Feed = () => {
             Dumps.online
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            The more you f*ck around, the more you will find out. Dump your thoughts.
+            Dump your thoughts anonymously.
           </p>
         </div>
       </header>

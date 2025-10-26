@@ -22,10 +22,10 @@ const Index = () => {
           {/* Main headline */}
           <div className="space-y-4 sm:space-y-5 animate-fade-in-up px-2">
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight bg-gradient-to-r from-primary to-destructive bg-clip-text text-transparent animate-text-shimmer leading-tight pb-2">
-              The more you f*ck around, the more you will find out. Dump your thoughts.
+              Dump your thoughts.
             </h1>
             <p className="text-base sm:text-lg md:text-2xl text-muted-foreground font-light">
-              Dump your thoughts anonymously.
+              Stay anonymous.
             </p>
           </div>
           
