@@ -142,13 +142,13 @@ export const PostForm = ({
     try {
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera is not supported on this device or browser. Please use a modern browser with camera support.');
+        alert('Camera is not supported on this device. Please use the file upload option instead.');
         return;
       }
 
       // Check if we're on HTTPS or localhost
       if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        alert('Camera access requires HTTPS. For now, you can use the file upload option instead.');
+        alert('Camera access requires HTTPS. Please use the file upload option instead.');
         return;
       }
 
@@ -161,122 +161,50 @@ export const PostForm = ({
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
+      // Simple camera capture using input with capture attribute
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment'; // Use back camera on mobile
       
-      // Create a video element to show camera feed
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      video.play();
-      video.style.position = 'fixed';
-      video.style.top = '0';
-      video.style.left = '0';
-      video.style.width = '100%';
-      video.style.height = '100%';
-      video.style.zIndex = '9999';
-      video.style.objectFit = 'cover';
-      document.body.appendChild(video);
-      
-      // Create overlay with capture button
-      const overlay = document.createElement('div');
-      overlay.style.position = 'fixed';
-      overlay.style.top = '0';
-      overlay.style.left = '0';
-      overlay.style.width = '100%';
-      overlay.style.height = '100%';
-      overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-      overlay.style.zIndex = '10000';
-      overlay.style.display = 'flex';
-      overlay.style.flexDirection = 'column';
-      overlay.style.justifyContent = 'flex-end';
-      overlay.style.alignItems = 'center';
-      overlay.style.padding = '20px';
-      
-      const captureBtn = document.createElement('button');
-      captureBtn.textContent = 'Capture Photo';
-      captureBtn.style.padding = '15px 30px';
-      captureBtn.style.fontSize = '18px';
-      captureBtn.style.backgroundColor = '#007bff';
-      captureBtn.style.color = 'white';
-      captureBtn.style.border = 'none';
-      captureBtn.style.borderRadius = '25px';
-      captureBtn.style.cursor = 'pointer';
-      
-      const cancelBtn = document.createElement('button');
-      cancelBtn.textContent = 'Cancel';
-      cancelBtn.style.padding = '15px 30px';
-      cancelBtn.style.fontSize = '18px';
-      cancelBtn.style.backgroundColor = '#6c757d';
-      cancelBtn.style.color = 'white';
-      cancelBtn.style.border = 'none';
-      cancelBtn.style.borderRadius = '25px';
-      cancelBtn.style.cursor = 'pointer';
-      cancelBtn.style.marginTop = '10px';
-      
-      overlay.appendChild(captureBtn);
-      overlay.appendChild(cancelBtn);
-      document.body.appendChild(overlay);
-      
-      // Create a canvas to capture the image
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      const cleanup = () => {
-        stream.getTracks().forEach(track => track.stop());
-        document.body.removeChild(video);
-        document.body.removeChild(overlay);
-      };
-      
-      cancelBtn.onclick = cleanup;
-      
-      captureBtn.onclick = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        // Draw the video frame to canvas
-        ctx?.drawImage(video, 0, 0);
-        
-        // Convert canvas to blob
-        canvas.toBlob((blob) => {
-          if (blob) {
-            // Create a file from the blob
-            const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
-            
-            // Validate file size (5MB max)
-            if (file.size > 5 * 1024 * 1024) {
-              alert('Image size must be less than 5MB');
-              cleanup();
-              return;
-            }
-            
-            setSelectedFile(file);
-            setImagePreview(URL.createObjectURL(blob));
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          // Validate file type
+          if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
           }
           
-          cleanup();
-        }, 'image/jpeg', 0.8);
+          // Validate file size (5MB max)
+          if (file.size > 5 * 1024 * 1024) {
+            alert('Image size must be less than 5MB');
+            return;
+          }
+          
+          setSelectedFile(file);
+          
+          // Create preview
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        }
       };
+      
+      // Trigger the camera
+      input.click();
       
     } catch (error) {
       console.error('Camera access failed:', error);
-      if (error.name === 'NotAllowedError') {
-        alert('Camera access denied. Please allow camera access and try again.');
-      } else if (error.name === 'NotFoundError') {
-        alert('No camera found on this device.');
-      } else {
-        alert('Camera access failed: ' + error.message);
-      }
+      alert('Camera access failed. Please use the file upload option instead.');
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">{editMode ? "Edit" : "New post"}</DialogTitle>
           <DialogDescription className="sr-only">
@@ -289,7 +217,7 @@ export const PostForm = ({
             placeholder="What's happening?"
             value={content}
             onChange={(e) => setContent(e.target.value.slice(0, 280))}
-            className="min-h-[100px] resize-none border focus-visible:ring-2 focus-visible:ring-ring p-3 text-base"
+            className="min-h-[120px] resize-none border focus-visible:ring-2 focus-visible:ring-ring p-3 text-base"
             onKeyDown={(e) => {
               // Auto-submit on mobile when user presses "Done" or "Enter"
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -297,6 +225,10 @@ export const PostForm = ({
                 handleSubmit(e);
               }
             }}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
           />
 
           {imagePreview && (
@@ -318,15 +250,16 @@ export const PostForm = ({
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div className="flex items-center gap-1">
+          <div className="flex flex-col sm:flex-row items-center justify-between pt-3 border-t gap-3">
+            <div className="flex items-center gap-2">
               <label htmlFor="image-upload">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-10 w-10"
                   onClick={() => document.getElementById('image-upload')?.click()}
+                  title="Upload Image"
                 >
                   <ImageIcon className="h-5 w-5 text-primary" />
                 </Button>
@@ -335,9 +268,9 @@ export const PostForm = ({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9"
+                className="h-10 w-10"
                 onClick={handleCameraCapture}
-                title="Take Photo (requires camera and HTTPS)"
+                title="Take Photo"
               >
                 <Camera className="h-5 w-5 text-primary" />
               </Button>
@@ -358,13 +291,7 @@ export const PostForm = ({
                 type="submit" 
                 disabled={!content.trim() || remainingChars < 0 || uploading} 
                 size="sm" 
-                className="rounded-full min-w-[80px] h-10 text-sm font-medium"
-                onClick={(e) => {
-                  // For mobile, also handle click events
-                  if (content.trim() && remainingChars >= 0 && !uploading) {
-                    handleSubmit(e);
-                  }
-                }}
+                className="rounded-full min-w-[90px] h-10 text-sm font-medium"
               >
                 {uploading ? (
                   <>
