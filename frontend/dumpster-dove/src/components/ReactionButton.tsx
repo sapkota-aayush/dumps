@@ -13,7 +13,6 @@ export const ReactionButton = ({ emoji, count, onClick }: ReactionButtonProps) =
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Reaction button clicked:", { emoji, count });
     
     // Instagram-like press effect
     setIsPressed(true);

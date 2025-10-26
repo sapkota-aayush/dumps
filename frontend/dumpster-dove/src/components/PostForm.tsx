@@ -87,9 +87,7 @@ export const PostForm = ({
       if (selectedFile) {
         try {
           setUploading(true);
-          console.log('Uploading image to S3:', selectedFile.name);
           imageUrl = await apiService.uploadImageToS3(selectedFile);
-          console.log('S3 upload successful, image URL:', imageUrl);
         } catch (error) {
           console.error("Failed to upload image to S3:", error);
           // Continue without image if upload fails

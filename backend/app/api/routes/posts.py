@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, File, UploadFile
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from slowapi import Limiter
 from slowapi.util import get_remote_address

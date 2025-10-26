@@ -14,13 +14,10 @@ export const useToken = () => {
         const existingToken = localStorage.getItem(TOKEN_KEY);
         
         if (existingToken) {
-          console.log('Using existing token:', existingToken);
           setToken(existingToken);
         } else {
           // Generate new token
-          console.log('Generating new token...');
           const tokenResponse = await apiService.generateToken();
-          console.log('Token generated:', tokenResponse);
           localStorage.setItem(TOKEN_KEY, tokenResponse.token);
           setToken(tokenResponse.token);
         }

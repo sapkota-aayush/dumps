@@ -1,5 +1,5 @@
-const API_BASE_URL = process.env.VITE_API_URL || 'https://dumps.online';
-const AUTH_BASE_URL = process.env.VITE_API_URL || 'https://dumps.online';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dumps.online';
+const AUTH_BASE_URL = import.meta.env.VITE_API_URL || 'https://dumps.online';
 
 export interface Post {
   id: number;
@@ -66,7 +66,6 @@ class ApiService {
   // Token management
   async generateToken(): Promise<TokenResponse> {
     try {
-      console.log('Making request to:', `${AUTH_BASE_URL}/api/auth/generate-token`);
       const response = await fetch(`${AUTH_BASE_URL}/api/auth/generate-token`, {
         method: 'POST',
         headers: {
@@ -74,8 +73,6 @@ class ApiService {
         },
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -84,7 +81,6 @@ class ApiService {
       }
 
       const data = await response.json();
-      console.log('Token response data:', data);
       return data;
     } catch (error) {
       console.error('Token generation error:', error);
@@ -94,7 +90,6 @@ class ApiService {
 
   // Posts
   async createPost(post: PostCreate): Promise<Post> {
-    console.log('API: Creating post with data:', post);
     return this.request<Post>('/api/posts/create', {
       method: 'POST',
       body: JSON.stringify(post),
@@ -111,7 +106,6 @@ class ApiService {
       params.append('hashtag', hashtag);
     }
 
-    console.log('API: Getting posts with params:', { hashtag, page, limit });
     return this.request<PostListResponse>(`/api/posts/posts?${params.toString()}`);
   }
 
@@ -142,15 +136,12 @@ class ApiService {
 
   async reactToPost(postId: number, reaction: string, token: string): Promise<Post> {
     const params = new URLSearchParams({ reaction, token });
-    console.log('API: Reacting to post', { postId, reaction, token, url: `/post/${postId}/react?${params.toString()}` });
-    return this.request<Post>(`/post/${postId}/react?${params.toString()}`, {
+    return this.request<Post>(`/api/posts/post/${postId}/react?${params.toString()}`, {
       method: 'POST',
     });
   }
 
   async uploadImage(file: File): Promise<{ image_url: string; message: string }> {
-    console.log('API: Uploading image', { fileName: file.name, fileSize: file.size, fileType: file.type });
-    
     const formData = new FormData();
     formData.append('file', file);
     
@@ -166,15 +157,12 @@ class ApiService {
     }
 
     const data = await response.json();
-    console.log('Image uploaded successfully:', data);
     return data;
   }
 
   // S3 Upload functionality
   async uploadImageToS3(file: File): Promise<string> {
     try {
-      console.log('Starting S3 upload for file:', file.name);
-      
       // Step 1: Get presigned URL from backend
       const presignedResponse = await this.request('/api/posts/upload/presigned-url', {
         method: 'POST',
@@ -184,7 +172,6 @@ class ApiService {
         })
       });
 
-      console.log('Got presigned URL:', presignedResponse);
       const { upload_url, image_url } = presignedResponse as { upload_url: string; image_url: string };
 
       // Step 2: Upload directly to S3
@@ -200,7 +187,6 @@ class ApiService {
         throw new Error(`S3 upload failed: ${uploadResponse.statusText}`);
       }
 
-      console.log('S3 upload successful, image URL:', image_url);
       return image_url;
     } catch (error) {
       console.error('S3 upload failed:', error);

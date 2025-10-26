@@ -30,9 +30,7 @@ const Index = () => {
         setLoadingMore(true);
       }
       setError(null);
-      console.log("Loading posts...", { selectedHashtag, token, page, isPolling });
       const response = await apiService.getPosts(selectedHashtag || undefined, page);
-      console.log("Posts loaded successfully:", response);
       
       if (isInitialLoad) {
         setPosts(response.posts);
@@ -44,7 +42,6 @@ const Index = () => {
           
           // Only update if there are actually new posts
           if (newPosts.length > 0) {
-            console.log("New posts found during polling:", newPosts.length);
             return [...newPosts, ...prevPosts];
           }
           
@@ -58,7 +55,6 @@ const Index = () => {
           });
           
           if (hasUpdates) {
-            console.log("Posts updated during polling");
             return response.posts;
           }
           
@@ -91,7 +87,6 @@ const Index = () => {
   // Load more posts for infinite scroll
   const loadMorePosts = useCallback(() => {
     if (!loadingMore && hasMore && !loading) {
-      console.log("Loading more posts...", { currentPage, hasMore, loadingMore });
       loadPosts(false, currentPage + 1);
     }
   }, [loadingMore, hasMore, currentPage, loading]);
@@ -157,8 +152,6 @@ const Index = () => {
     }
 
     try {
-      console.log("Creating/updating post...", { content, author, isAnonymous, hashtags, image, token });
-      
       if (editingPost) {
         // Update existing post
         const updates = {
@@ -166,9 +159,7 @@ const Index = () => {
           fictional_name: isAnonymous ? "Anonymous" : author,
         };
         
-        console.log("Updating post:", editingPost.id, updates);
         const updatedPost = await apiService.updatePost(editingPost.id, token, updates);
-        console.log("Post updated successfully:", updatedPost);
         setPosts(posts.map(post => post.id === editingPost.id ? updatedPost : post));
         setEditingPost(null);
       } else {
@@ -181,9 +172,7 @@ const Index = () => {
           image_url: image,
         };
         
-        console.log("Creating new post:", newPost);
         const createdPost = await apiService.createPost(newPost);
-        console.log("Post created successfully:", createdPost);
         setPosts([createdPost, ...posts]);
       }
       
@@ -223,18 +212,13 @@ const Index = () => {
       return;
     }
     
-    console.log("Reacting to post:", { postId, reaction, token });
-    
     try {
       const updatedPost = await apiService.reactToPost(postId, reaction, token);
-      console.log("Reaction successful:", updatedPost);
-      console.log("Current posts before update:", posts);
       
       setPosts(prevPosts => {
         const newPosts = prevPosts.map(post => 
           post.id === postId ? updatedPost : post
         );
-        console.log("Updated posts:", newPosts);
         return newPosts;
       });
     } catch (err) {

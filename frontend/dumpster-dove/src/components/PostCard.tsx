@@ -121,34 +121,22 @@ export const PostCard = ({ post, onReact, onHashtagClick, onEdit, onDelete, curr
           <ReactionButton
             emoji="👍"
             count={post.reactions.thumbs_up}
-            onClick={() => {
-              console.log("Thumbs up clicked for post:", post.id);
-              onReact(post.id, "thumbs_up");
-            }}
+              onClick={() => onReact(post.id, "thumbs_up")}
           />
           <ReactionButton
             emoji="❤️"
             count={post.reactions.heart}
-            onClick={() => {
-              console.log("Heart clicked for post:", post.id);
-              onReact(post.id, "heart");
-            }}
+            onClick={() => onReact(post.id, "heart")}
           />
           <ReactionButton
             emoji="😂"
             count={post.reactions.laugh}
-            onClick={() => {
-              console.log("Laugh clicked for post:", post.id);
-              onReact(post.id, "laugh");
-            }}
+            onClick={() => onReact(post.id, "laugh")}
           />
           <ReactionButton
             emoji="😡"
             count={post.reactions.angry}
-            onClick={() => {
-              console.log("Angry clicked for post:", post.id);
-              onReact(post.id, "angry");
-            }}
+            onClick={() => onReact(post.id, "angry")}
           />
         </div>
       </div>
