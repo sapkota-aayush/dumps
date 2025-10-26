@@ -39,9 +39,11 @@ All colors MUST be HSL.
     --radius: 0.5rem;
 
     /* Custom tokens for savage design */
-    --gradient-primary: linear-gradient(135deg, hsl(0 70% 35%), hsl(15 70% 25%));
+    --gradient-primary: linear-gradient(135deg, hsl(0 0% 98%), hsl(0 0% 95%));
     --gradient-accent: linear-gradient(135deg, hsl(0 60% 25%), hsl(0 50% 15%));
-    --card-shadow: 0 0% 60%;
+    --card-shadow: 0 2px 8px hsl(0 0% 0% / 0.08);
+    --card-hover-shadow: 0 8px 24px hsl(0 0% 0% / 0.12);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --glow: 0 70% 45%;
   }
 
@@ -87,6 +89,9 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
     background-image: 
       repeating-linear-gradient(
         0deg,
@@ -102,6 +107,26 @@ All colors MUST be HSL.
         hsl(0 0% 0% / 0.02) 2px,
         hsl(0 0% 0% / 0.02) 4px
       );
+  }
+
+  /* Safe area support for mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Touch-friendly interactions */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
