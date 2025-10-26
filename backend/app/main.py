@@ -29,6 +29,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://dumps.online",       # Production domain
         "http://16.52.134.125:8080",  # Frontend on port 8080
         "http://localhost:8080",      # Local frontend
         "http://172.31.39.166:8080",  # Internal network
