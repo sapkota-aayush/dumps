@@ -1,9 +1,5 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'http://16.52.134.125:8000/api/posts' 
-  : 'http://16.52.134.125:8000/api/posts';
-const AUTH_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://16.52.134.125/api/auth' 
-  : 'http://localhost:8000/api/auth';
+const API_BASE_URL = process.env.VITE_API_URL || 'http://16.52.134.125:8000';
+const AUTH_BASE_URL = process.env.VITE_API_URL || 'http://16.52.134.125:8000';
 
 export interface Post {
   id: number;
