@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { trackPostReaction } from "@/lib/analytics";
 
 interface ReactionButtonProps {
   emoji: string;
@@ -17,6 +18,9 @@ export const ReactionButton = ({ emoji, count, onClick }: ReactionButtonProps) =
     // Instagram-like press effect
     setIsPressed(true);
     setTimeout(() => setIsPressed(false), 150);
+    
+    // Track reaction in Google Analytics
+    trackPostReaction(emoji);
     
     onClick();
   };

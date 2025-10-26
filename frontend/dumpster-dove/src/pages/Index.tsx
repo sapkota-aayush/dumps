@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { apiService, Post as ApiPost } from "@/services/api";
 import { useToken } from "@/hooks/useToken";
+import { trackPageView } from "@/lib/analytics";
 
 const Index = () => {
   const [posts, setPosts] = useState<ApiPost[]>([]);
@@ -125,6 +126,9 @@ const Index = () => {
 
   useEffect(() => {
     if (!tokenLoading && token) {
+      // Track page view in Google Analytics
+      trackPageView('Dumps.online - Home');
+      
       // Reset pagination when hashtag changes
       setCurrentPage(1);
       setHasMore(true);

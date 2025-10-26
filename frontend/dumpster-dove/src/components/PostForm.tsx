@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Image as ImageIcon, X, Upload, Camera } from "lucide-react";
 import { apiService } from "@/services/api";
+import { trackPostCreated } from "@/lib/analytics";
 
 interface PostFormProps {
   open: boolean;
@@ -100,6 +101,10 @@ export const PostForm = ({
       }
       
       onSubmit(content, author, authorType === "anonymous", hashtags, imageUrl || undefined);
+      
+      // Track post creation in Google Analytics
+      trackPostCreated(!!imageUrl);
+      
       setContent("");
       setFictionalName("");
       setHashtagInput("");
