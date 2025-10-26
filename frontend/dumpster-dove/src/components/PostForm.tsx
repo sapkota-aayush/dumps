@@ -138,171 +138,41 @@ export const PostForm = ({
     }
   };
 
-  const handleCameraCapture = async () => {
-    try {
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera is not supported on this device. Please use the file upload option instead.');
-        return;
-      }
-
-      // Check if we're on HTTPS or localhost
-      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        alert('Camera access requires HTTPS. Please use the file upload option instead.');
-        return;
-      }
-
-      // Check if device has camera capabilities
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
-      
-      if (!hasVideoDevice) {
-        alert('No camera found on this device. Please use the file upload option instead.');
-        return;
-      }
-
-      // Get camera stream
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
-      
-      // Create camera modal
-      const modal = document.createElement('div');
-      modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: black;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-      `;
-      
-      // Create video element
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      video.style.cssText = `
-        flex: 1;
-        object-fit: cover;
-        width: 100%;
-        height: 100%;
-      `;
-      video.play();
-      
-      // Create controls
-      const controls = document.createElement('div');
-      controls.style.cssText = `
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 20px;
-        align-items: center;
-      `;
-      
-      // Capture button
-      const captureBtn = document.createElement('button');
-      captureBtn.innerHTML = '📷';
-      captureBtn.style.cssText = `
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        border: 4px solid white;
-        background: transparent;
-        color: white;
-        font-size: 24px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
-      
-      // Cancel button
-      const cancelBtn = document.createElement('button');
-      cancelBtn.innerHTML = '✕';
-      cancelBtn.style.cssText = `
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        border: 2px solid white;
-        background: rgba(255,255,255,0.2);
-        color: white;
-        font-size: 20px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
-      
-      controls.appendChild(cancelBtn);
-      controls.appendChild(captureBtn);
-      modal.appendChild(video);
-      modal.appendChild(controls);
-      document.body.appendChild(modal);
-      
-      // Cleanup function
-      const cleanup = () => {
-        stream.getTracks().forEach(track => track.stop());
-        document.body.removeChild(modal);
-      };
-      
-      // Event handlers
-      cancelBtn.onclick = cleanup;
-      
-      captureBtn.onclick = () => {
-        // Create canvas to capture image
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+  const handleCameraCapture = () => {
+    // Create a hidden file input with camera capture
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment'; // Use back camera on mobile
+    
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          alert('Please select an image file');
+          return;
+        }
         
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('Image size must be less than 5MB');
+          return;
+        }
         
-        // Draw video frame to canvas
-        ctx?.drawImage(video, 0, 0);
+        setSelectedFile(file);
         
-        // Convert to blob
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
-            
-            // Validate file size
-            if (file.size > 5 * 1024 * 1024) {
-              alert('Image size must be less than 5MB');
-              cleanup();
-              return;
-            }
-            
-            setSelectedFile(file);
-            
-            // Create preview
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-          }
-          
-          cleanup();
-        }, 'image/jpeg', 0.8);
-      };
-      
-    } catch (error) {
-      console.error('Camera access failed:', error);
-      if (error.name === 'NotAllowedError') {
-        alert('Camera access denied. Please allow camera access and try again.');
-      } else if (error.name === 'NotFoundError') {
-        alert('No camera found on this device.');
-      } else {
-        alert('Camera access failed: ' + error.message);
+        // Create preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
       }
-    }
+    };
+    
+    // Trigger the camera/file picker
+    input.click();
   };
 
   return (
@@ -373,7 +243,7 @@ export const PostForm = ({
                 size="icon"
                 className="h-10 w-10"
                 onClick={handleCameraCapture}
-                title="Take Photo"
+                title="Take Photo or Select from Gallery"
               >
                 <Camera className="h-5 w-5 text-primary" />
               </Button>
