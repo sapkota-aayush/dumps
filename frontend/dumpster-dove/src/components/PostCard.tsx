@@ -13,7 +13,7 @@ const getImageUrl = (imageUrl: string) => {
     return `http://localhost:8000${imageUrl}`;
   }
   // For production
-  return `https://16.52.134.125${imageUrl}`;
+  return `https://dumps.online${imageUrl}`;
 };
 
 export interface Post {
