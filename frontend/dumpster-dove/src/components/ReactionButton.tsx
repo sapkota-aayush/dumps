@@ -22,7 +22,6 @@ export const ReactionButton = ({ emoji, count, onClick }: ReactionButtonProps) =
     // Track reaction in Google Analytics
     trackPostReaction(emoji);
     
-    // Trigger animation in parent
     onClick();
   };
 

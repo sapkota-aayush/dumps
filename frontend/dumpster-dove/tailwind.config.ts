@@ -112,20 +112,6 @@ export default {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
         },
-        "fall-into-bin": {
-          "0%": { 
-            opacity: "1", 
-            transform: "translateX(0) translateY(0) scale(1) rotate(0deg)",
-          },
-          "50%": {
-            opacity: "0.8",
-            transform: "translateX(20px) translateY(10px) scale(0.8) rotate(45deg)",
-          },
-          "100%": { 
-            opacity: "0", 
-            transform: "translateX(40px) translateY(20px) scale(0.5) rotate(180deg)",
-          },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -137,7 +123,6 @@ export default {
         "scroll-right": "scroll-right 40s linear infinite",
         "scroll-left": "scroll-left 45s linear infinite",
         "text-shimmer": "text-shimmer 3s ease-in-out infinite",
-        "fall-into-bin": "fall-into-bin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards",
       },
     },
   },
