@@ -66,8 +66,8 @@ class ApiService {
   // Token management
   async generateToken(): Promise<TokenResponse> {
     try {
-      console.log('Making request to:', `${AUTH_BASE_URL}/generate-token`);
-      const response = await fetch(`${AUTH_BASE_URL}/generate-token`, {
+      console.log('Making request to:', `${AUTH_BASE_URL}/api/auth/generate-token`);
+      const response = await fetch(`${AUTH_BASE_URL}/api/auth/generate-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
