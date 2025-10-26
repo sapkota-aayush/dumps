@@ -117,11 +117,11 @@ export const PostCard = ({ post, onReact, onHashtagClick, onEdit, onDelete, curr
           </button>
         </div>
         
-        <div className="flex items-center gap-4 pt-3">
+        <div className="flex items-center gap-3 pt-3">
           <ReactionButton
             emoji="👍"
             count={post.reactions.thumbs_up}
-              onClick={() => onReact(post.id, "thumbs_up")}
+            onClick={() => onReact(post.id, "thumbs_up")}
           />
           <ReactionButton
             emoji="❤️"
