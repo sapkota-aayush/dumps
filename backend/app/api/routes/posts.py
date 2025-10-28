@@ -70,6 +70,30 @@ async def get_posts(
         limit=limit
     )
 
+# Get posts for a specific hashtag (dynamic endpoint)
+@router.get("/hashtags/{hashtag}/posts", response_model=PostListResponse)
+async def get_hashtag_posts(
+    hashtag: str,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Posts per page"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all posts for a specific hashtag.
+    Example: /api/hashtags/barca/posts
+    """
+    query = db.query(Post).filter(Post.hashtag == hashtag)
+    
+    total = query.count()
+    posts = query.order_by(Post.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    
+    return PostListResponse(
+        posts=posts,
+        total=total,
+        page=page,
+        limit=limit
+    )
+
 # Get user's own posts
 @router.get("/mydumps", response_model=PostListResponse)
 async def get_my_posts(

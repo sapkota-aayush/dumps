@@ -109,6 +109,15 @@ class ApiService {
     return this.request<PostListResponse>(`/api/posts/posts?${params.toString()}`);
   }
 
+  async getHashtagPosts(hashtag: string, page: number = 1, limit: number = 20): Promise<PostListResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    return this.request<PostListResponse>(`/api/posts/hashtags/${hashtag}/posts?${params.toString()}`);
+  }
+
   async getMyPosts(token: string, page: number = 1, limit: number = 10): Promise<PostListResponse> {
     const params = new URLSearchParams({
       token,

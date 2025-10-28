@@ -8,6 +8,7 @@ import { useToken } from "@/hooks/useToken";
 import { trackPageView } from "@/lib/analytics";
 import { BottomNav } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 const Feed = () => {
   const [posts, setPosts] = useState<ApiPost[]>([]);
@@ -22,6 +23,7 @@ const Feed = () => {
   const [error, setError] = useState<string | null>(null);
   
   const { token, loading: tokenLoading } = useToken();
+  const navigate = useNavigate();
 
   // Load posts from API
   const loadPosts = async (isInitialLoad = false, page = 1, isPolling = false) => {
@@ -243,7 +245,6 @@ const Feed = () => {
   const handleHashtagSearch = (term: string) => {
     // Remove leading # if present
     const cleanSearch = term.startsWith('#') ? term.slice(1) : term;
-    setSearchTerm(cleanSearch);
     
     // Check if we have any posts with matching hashtags
     const matchingHashtags = allHashtags.filter(tag => 
@@ -251,10 +252,11 @@ const Feed = () => {
     );
     
     if (matchingHashtags.length > 0) {
-      // Set to the first matching hashtag
-      setSelectedHashtag(matchingHashtags[0]);
+      // Navigate to the hashtag page instead of filtering
+      navigate(`/hashtag/${matchingHashtags[0]}`);
     } else {
-      // No matching hashtag found, search in content instead
+      // If no matching hashtags, search in content locally
+      setSearchTerm(cleanSearch);
       setSelectedHashtag(null);
     }
   };
@@ -364,7 +366,7 @@ const Feed = () => {
                 key={tag}
                 variant={selectedHashtag === tag ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedHashtag(tag)}
+                onClick={() => navigate(`/hashtag/${tag}`)}
                 className="relative"
               >
                 #{tag}
@@ -422,7 +424,10 @@ const Feed = () => {
                 key={post.id}
                 post={post}
                 onReact={(postId, reaction) => handleReact(postId, reaction)}
-                onHashtagClick={(hashtag) => setSelectedHashtag(hashtag)}
+                onHashtagClick={(hashtag) => {
+                  // Navigate to hashtag page using React Router
+                  navigate(`/hashtag/${hashtag}`);
+                }}
                 onEdit={(postId) => handleEditPost(postId)}
                 onDelete={(postId) => handleDeletePost(postId)}
                 currentUserToken={token || ""}

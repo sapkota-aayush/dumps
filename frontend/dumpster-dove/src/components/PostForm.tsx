@@ -20,6 +20,7 @@ interface PostFormProps {
   initialIsAnonymous?: boolean;
   initialHashtags?: string[];
   initialImage?: string;
+  lockHashtag?: boolean; // New prop to lock the hashtag field
 }
 
 export const PostForm = ({ 
@@ -31,7 +32,8 @@ export const PostForm = ({
   initialAuthor = "",
   initialIsAnonymous = true,
   initialHashtags = [],
-  initialImage = ""
+  initialImage = "",
+  lockHashtag = false
 }: PostFormProps) => {
   const [content, setContent] = useState(initialContent);
   const [authorType, setAuthorType] = useState<"anonymous" | "fictional">(
@@ -76,10 +78,13 @@ export const PostForm = ({
       const author = authorType === "anonymous" ? "Anonymous" : fictionalName.trim() || "Anonymous";
       
       // Parse hashtags from input
-      const hashtags = hashtagInput
-        .split(/[\s,]+/)
-        .map(tag => tag.trim().replace(/^#/, ""))
-        .filter(tag => tag.length > 0);
+      // If hashtag is locked (posting from hashtag page), use the locked hashtag
+      const hashtags = lockHashtag 
+        ? [hashtagInput.trim()] // Use the locked hashtag
+        : hashtagInput
+            .split(/[\s,]+/)
+            .map(tag => tag.trim().replace(/^#/, ""))
+            .filter(tag => tag.length > 0);
       
       let imageUrl: string | undefined = undefined;
       
@@ -326,8 +331,14 @@ export const PostForm = ({
                 placeholder="college funny rant"
                 value={hashtagInput}
                 onChange={(e) => setHashtagInput(e.target.value)}
+                disabled={lockHashtag}
                 className="h-9 text-sm"
               />
+              {lockHashtag && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Posting to: #{hashtagInput}
+                </p>
+              )}
             </div>
           </div>
         </form>
