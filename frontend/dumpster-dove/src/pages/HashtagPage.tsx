@@ -29,14 +29,43 @@ const HashtagPage = () => {
     const loadPosts = async () => {
       if (!hashtag) return;
       
-      setLoading(true);
-      try {
-        const response = await apiService.getHashtagPosts(hashtag);
-        setPosts(response.posts);
-      } catch (err) {
-        console.error("Failed to load posts:", err);
-      } finally {
-        setLoading(false);
+      // Try to load cached posts first for instant display
+      const cacheKey = `cached_posts_${hashtag}`;
+      const cachedPosts = localStorage.getItem(cacheKey);
+      
+      if (cachedPosts) {
+        try {
+          const parsedPosts = JSON.parse(cachedPosts);
+          setPosts(parsedPosts);
+          setLoading(false);
+          
+          // Load fresh data in background
+          const response = await apiService.getHashtagPosts(hashtag);
+          setPosts(response.posts);
+          // Update cache with fresh data
+          localStorage.setItem(cacheKey, JSON.stringify(response.posts));
+        } catch (err) {
+          console.error("Failed to parse cached posts:", err);
+          // Fallback to normal loading
+          setLoading(true);
+          const response = await apiService.getHashtagPosts(hashtag);
+          setPosts(response.posts);
+          localStorage.setItem(cacheKey, JSON.stringify(response.posts));
+          setLoading(false);
+        }
+      } else {
+        // No cache, load normally
+        setLoading(true);
+        try {
+          const response = await apiService.getHashtagPosts(hashtag);
+          setPosts(response.posts);
+          // Cache the posts
+          localStorage.setItem(cacheKey, JSON.stringify(response.posts));
+        } catch (err) {
+          console.error("Failed to load posts:", err);
+        } finally {
+          setLoading(false);
+        }
       }
     };
 
@@ -60,8 +89,21 @@ const HashtagPage = () => {
         const response = await apiService.getNewPosts(since, hashtag);
         
         if (response.posts.length > 0) {
-          // Add new posts to the beginning
-          setPosts(prevPosts => [...response.posts, ...prevPosts]);
+          // Add new posts to the beginning, avoiding duplicates
+          setPosts(prevPosts => {
+            const existingIds = new Set(prevPosts.map(p => p.id));
+            const newPosts = response.posts.filter(post => !existingIds.has(post.id));
+            
+            if (newPosts.length > 0) {
+              const updatedPosts = [...newPosts, ...prevPosts];
+              // Update cache with new posts
+              const cacheKey = `cached_posts_${hashtag}`;
+              localStorage.setItem(cacheKey, JSON.stringify(updatedPosts));
+              return updatedPosts;
+            }
+            
+            return prevPosts; // No new posts to add
+          });
         }
       } catch (err) {
         console.error("Failed to fetch new posts:", err);
@@ -98,6 +140,14 @@ const HashtagPage = () => {
         
         const createdPost = await apiService.createPost(newPost);
         setPosts([createdPost, ...posts]);
+        
+        // Update cache with new post (avoid duplicates)
+        const cacheKey = `cached_posts_${hashtag}`;
+        const existingIds = new Set(posts.map(p => p.id));
+        if (!existingIds.has(createdPost.id)) {
+          const updatedPosts = [createdPost, ...posts];
+          localStorage.setItem(cacheKey, JSON.stringify(updatedPosts));
+        }
       }
       
       setIsFormOpen(false);

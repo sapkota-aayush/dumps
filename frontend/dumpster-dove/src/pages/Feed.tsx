@@ -40,6 +40,9 @@ const Feed = () => {
       
       if (isInitialLoad) {
         setPosts(response.posts);
+        // Cache the posts for instant loading on refresh
+        const cacheKey = `cached_posts_${selectedHashtag || 'all'}`;
+        localStorage.setItem(cacheKey, JSON.stringify(response.posts));
       } else if (isPolling) {
         // For polling, only update if there are new posts
         setPosts(prevPosts => {
@@ -134,11 +137,33 @@ const Feed = () => {
       // Track page view in Google Analytics
       trackPageView('Dumps.online - Home');
       
+      // Try to load cached posts first for instant display
+      const cacheKey = `cached_posts_${selectedHashtag || 'all'}`;
+      const cachedPosts = localStorage.getItem(cacheKey);
+      
+      if (cachedPosts) {
+        try {
+          const parsedPosts = JSON.parse(cachedPosts);
+          setPosts(parsedPosts);
+          setLoading(false);
+          
+          // Load fresh data in background
+          loadPosts(true);
+        } catch (err) {
+          console.error("Failed to parse cached posts:", err);
+          // Fallback to normal loading
+          setPosts([]);
+          loadPosts(true);
+        }
+      } else {
+        // No cache, load normally
+        setPosts([]);
+        loadPosts(true);
+      }
+      
       // Reset pagination when hashtag changes
       setCurrentPage(1);
       setHasMore(true);
-      setPosts([]);
-      loadPosts(true); // Initial load with loading spinner
     }
   }, [token, tokenLoading, selectedHashtag]);
 
@@ -159,8 +184,21 @@ const Feed = () => {
         const response = await apiService.getNewPosts(since, selectedHashtag || undefined);
         
         if (response.posts.length > 0) {
-          // Add new posts to the beginning
-          setPosts(prevPosts => [...response.posts, ...prevPosts]);
+          // Add new posts to the beginning, avoiding duplicates
+          setPosts(prevPosts => {
+            const existingIds = new Set(prevPosts.map(p => p.id));
+            const newPosts = response.posts.filter(post => !existingIds.has(post.id));
+            
+            if (newPosts.length > 0) {
+              const updatedPosts = [...newPosts, ...prevPosts];
+              // Update cache with new posts
+              const cacheKey = `cached_posts_${selectedHashtag || 'all'}`;
+              localStorage.setItem(cacheKey, JSON.stringify(updatedPosts));
+              return updatedPosts;
+            }
+            
+            return prevPosts; // No new posts to add
+          });
         }
       } catch (err) {
         console.error("Failed to fetch new posts:", err);
@@ -200,6 +238,14 @@ const Feed = () => {
         
         const createdPost = await apiService.createPost(newPost);
         setPosts([createdPost, ...posts]);
+        
+        // Update cache with new post (avoid duplicates)
+        const cacheKey = `cached_posts_${selectedHashtag || 'all'}`;
+        const existingIds = new Set(posts.map(p => p.id));
+        if (!existingIds.has(createdPost.id)) {
+          const updatedPosts = [createdPost, ...posts];
+          localStorage.setItem(cacheKey, JSON.stringify(updatedPosts));
+        }
       }
       
       setIsFormOpen(false);
