@@ -43,6 +43,35 @@ const HashtagPage = () => {
     loadPosts();
   }, [hashtag]);
 
+  // Smart real-time updates for hashtag page
+  useEffect(() => {
+    if (!hashtag || posts.length === 0) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        // Get the timestamp of the most recent post we have
+        const latestPost = posts[0];
+        if (!latestPost) return;
+        
+        // Convert to ISO string for API
+        const since = new Date(latestPost.created_at).toISOString();
+        
+        // Only fetch posts newer than what we have for this hashtag
+        const response = await apiService.getNewPosts(since, hashtag);
+        
+        if (response.posts.length > 0) {
+          // Add new posts to the beginning
+          setPosts(prevPosts => [...response.posts, ...prevPosts]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch new posts:", err);
+        // Silently fail - don't show error for background updates
+      }
+    }, 30000); // Poll every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [hashtag, posts]);
+
   const handleCreatePost = async (content: string, author: string, isAnonymous: boolean, hashtags: string[], image?: string) => {
     if (!token) return;
 

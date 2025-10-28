@@ -219,6 +219,32 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
     image_url = f"/uploads/{unique_filename}"
     return {"image_url": image_url, "message": "Image uploaded successfully"}
 
+# Get only new posts since a timestamp
+@router.get("/posts/new", response_model=PostListResponse)
+async def get_new_posts(
+    since: datetime = Query(..., description="Only posts after this timestamp (ISO format)"),
+    hashtag: Optional[str] = Query(None, description="Filter by hashtag"),
+    limit: int = Query(20, ge=1, le=100, description="Maximum posts to return"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get only new posts created after the specified timestamp.
+    This is much more efficient than fetching all posts.
+    """
+    query = db.query(Post).filter(Post.created_at > since)
+    
+    if hashtag:
+        query = query.filter(Post.hashtag == hashtag)
+    
+    posts = query.order_by(Post.created_at.desc()).limit(limit).all()
+    
+    return PostListResponse(
+        posts=posts,
+        total=len(posts),
+        page=1,
+        limit=limit
+    )
+
 # Get presigned URL for S3 upload
 @router.post("/upload/presigned-url", response_model=PresignedUrlResponse)
 @limiter.limit("50/hour")

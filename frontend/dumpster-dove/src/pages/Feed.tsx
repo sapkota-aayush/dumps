@@ -142,17 +142,34 @@ const Feed = () => {
     }
   }, [token, tokenLoading, selectedHashtag]);
 
-  // Real-time updates - poll every 5 seconds (silent updates)
+  // Smart real-time updates - only fetch new posts since last check
   useEffect(() => {
-    if (!token) return;
+    if (!token || posts.length === 0) return;
     
-    const interval = setInterval(() => {
-      // Only poll for new posts, not pagination
-      loadPosts(false, 1, true); // Always check page 1 for new posts, isPolling=true
-    }, 10000); // Poll every 10 seconds
+    const interval = setInterval(async () => {
+      try {
+        // Get the timestamp of the most recent post we have
+        const latestPost = posts[0];
+        if (!latestPost) return;
+        
+        // Convert to ISO string for API
+        const since = new Date(latestPost.created_at).toISOString();
+        
+        // Only fetch posts newer than what we have
+        const response = await apiService.getNewPosts(since, selectedHashtag || undefined);
+        
+        if (response.posts.length > 0) {
+          // Add new posts to the beginning
+          setPosts(prevPosts => [...response.posts, ...prevPosts]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch new posts:", err);
+        // Silently fail - don't show error for background updates
+      }
+    }, 30000); // Poll every 30 seconds instead of 10
     
     return () => clearInterval(interval);
-  }, [token, selectedHashtag]);
+  }, [token, selectedHashtag, posts]);
 
   const handleCreatePost = async (content: string, author: string, isAnonymous: boolean, hashtags: string[], image?: string) => {
     if (!token) {
