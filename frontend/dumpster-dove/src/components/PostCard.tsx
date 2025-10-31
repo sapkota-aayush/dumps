@@ -102,6 +102,7 @@ export const PostCard = ({ post, onReact, onHashtagClick, onEdit, onDelete, curr
             <img 
               src={getImageUrl(post.image_url)} 
               alt="Post image" 
+              loading="lazy"
               className="w-full h-auto max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => window.open(getImageUrl(post.image_url), '_blank')}
             />

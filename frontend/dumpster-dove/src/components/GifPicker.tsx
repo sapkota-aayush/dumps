@@ -117,6 +117,7 @@ export const GifPicker = ({ open, onOpenChange, onSelect }: GifPickerProps) => {
                   <img
                     src={gif.images.fixed_height.url}
                     alt="GIF"
+                    loading="lazy"
                     className="w-full h-full object-cover"
                   />
                 </button>

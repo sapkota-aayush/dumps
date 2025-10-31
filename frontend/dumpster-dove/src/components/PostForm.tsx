@@ -219,6 +219,7 @@ export const PostForm = ({
               <img 
                 src={imagePreview} 
                 alt="Preview" 
+                loading="lazy"
                 className="w-full max-h-64 object-cover"
               />
               <Button
@@ -226,6 +227,7 @@ export const PostForm = ({
                 variant="ghost"
                 size="icon"
                 onClick={() => setImagePreview(null)}
+                aria-label="Remove image"
                 className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white"
               >
                 <X className="h-4 w-4" />
@@ -242,6 +244,7 @@ export const PostForm = ({
                   size="icon"
                   className="h-10 w-10"
                   onClick={() => document.getElementById('image-upload')?.click()}
+                  aria-label="Upload image"
                   title="Upload Image"
                 >
                   <ImageIcon className="h-5 w-5 text-primary" />
@@ -253,6 +256,7 @@ export const PostForm = ({
                 size="icon"
                 className="h-10 w-10"
                 onClick={handleCameraCapture}
+                aria-label="Take photo or select from gallery"
                 title="Take Photo or Select from Gallery"
               >
                 <Camera className="h-5 w-5 text-primary" />
@@ -263,6 +267,7 @@ export const PostForm = ({
                 size="icon"
                 className="h-10 w-10"
                 onClick={() => setGifPickerOpen(true)}
+                aria-label="Search GIFs"
                 title="Search GIFs"
               >
                 <FileVideo className="h-5 w-5 text-primary" />

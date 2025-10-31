@@ -80,6 +80,7 @@ export const BottomNav = ({ onHashtagSearch, allHashtags = [] }: BottomNavProps)
               variant={isFeed ? "default" : "ghost"}
               size="icon"
               onClick={() => navigate("/feed")}
+              aria-label="Home"
               className={cn(
                 "flex-1 h-12 rounded-lg transition-all",
                 isFeed
@@ -95,6 +96,7 @@ export const BottomNav = ({ onHashtagSearch, allHashtags = [] }: BottomNavProps)
               variant="ghost"
               size="icon"
               onClick={() => setSearchOpen(true)}
+              aria-label="Search"
               className="flex-1 h-12 rounded-lg hover:bg-accent transition-all"
             >
               <Search className="w-5 h-5" />
@@ -107,6 +109,7 @@ export const BottomNav = ({ onHashtagSearch, allHashtags = [] }: BottomNavProps)
               onClick={() => {
                 // TODO: Navigate to notifications page
               }}
+              aria-label="Notifications"
               className="flex-1 h-12 rounded-lg hover:bg-accent transition-all"
             >
               <Bell className="w-5 h-5" />
@@ -119,6 +122,7 @@ export const BottomNav = ({ onHashtagSearch, allHashtags = [] }: BottomNavProps)
               onClick={() => {
                 // TODO: Navigate to announcements page
               }}
+              aria-label="Announcements"
               className="flex-1 h-12 rounded-lg hover:bg-accent transition-all"
             >
               <Megaphone className="w-5 h-5" />

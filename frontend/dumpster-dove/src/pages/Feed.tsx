@@ -535,6 +535,7 @@ const Feed = () => {
             setSearchTerm("");
             setSelectedHashtag(null);
           }}
+          aria-label="Back to all posts"
           className="fixed bottom-36 right-6 h-14 w-14 rounded-lg shadow-lg hover:shadow-xl bg-secondary hover:bg-secondary/90 hover:scale-110 transition-all duration-200 z-40"
           size="icon"
           title="Back to all posts"
@@ -545,6 +546,7 @@ const Feed = () => {
 
       <Button
         onClick={() => setIsFormOpen(true)}
+        aria-label="Create new post"
         className={cn(
           "fixed right-6 h-16 w-16 rounded-lg shadow-glow-lg hover:shadow-glow bg-primary hover:bg-primary/90 hover:scale-110 transition-all duration-200 z-40",
           (searchTerm || selectedHashtag) ? "bottom-24" : "bottom-20"
