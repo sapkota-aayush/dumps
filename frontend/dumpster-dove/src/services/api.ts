@@ -96,7 +96,7 @@ class ApiService {
     });
   }
 
-  async getPosts(hashtag?: string, page: number = 1, limit: number = 10): Promise<PostListResponse> {
+  async getPosts(hashtag?: string, page: number = 1, limit: number = 20): Promise<PostListResponse> {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -109,7 +109,7 @@ class ApiService {
     return this.request<PostListResponse>(`/api/posts/posts?${params.toString()}`);
   }
 
-  async getHashtagPosts(hashtag: string, page: number = 1, limit: number = 10): Promise<PostListResponse> {
+  async getHashtagPosts(hashtag: string, page: number = 1, limit: number = 20): Promise<PostListResponse> {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -118,7 +118,7 @@ class ApiService {
     return this.request<PostListResponse>(`/api/posts/hashtags/${hashtag}/posts?${params.toString()}`);
   }
 
-  async getNewPosts(since: string, hashtag?: string, limit: number = 10): Promise<PostListResponse> {
+  async getNewPosts(since: string, hashtag?: string, limit: number = 20): Promise<PostListResponse> {
     const params = new URLSearchParams({
       since: since,
       limit: limit.toString(),
