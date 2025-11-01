@@ -9,6 +9,7 @@ import { Image as ImageIcon, X, Upload, Camera, FileVideo, Search } from "lucide
 import { apiService } from "@/services/api";
 import { trackPostCreated } from "@/lib/analytics";
 import { GifPicker } from "./GifPicker";
+import imageCompression from 'browser-image-compression';
 
 interface PostFormProps {
   open: boolean;
@@ -121,7 +122,25 @@ export const PostForm = ({
 
   const remainingChars = 280 - content.length;
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = async (file: File): Promise<File> => {
+    const options = {
+      maxSizeMB: 0.3,          // Target 300KB max
+      maxWidthOrHeight: 1920,   // Max dimension
+      useWebWorker: true,       // Use web worker for better performance
+      fileType: 'image/webp'    // Convert to WebP (smaller)
+    };
+    
+    try {
+      const compressedFile = await imageCompression(file, options);
+      console.log(`Original: ${(file.size / 1024 / 1024).toFixed(2)}MB → Compressed: ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+      return compressedFile;
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      return file; // Return original if compression fails
+    }
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
@@ -130,20 +149,24 @@ export const PostForm = ({
         return;
       }
       
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
+      // Validate file size (10MB max before compression)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image size must be less than 10MB');
         return;
       }
       
-      setSelectedFile(file);
+      // Compress the image
+      setUploading(true);
+      const compressedFile = await compressImage(file);
+      setSelectedFile(compressedFile);
+      setUploading(false);
       
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
     }
   };
 
@@ -154,7 +177,7 @@ export const PostForm = ({
     input.accept = 'image/*';
     input.capture = 'environment'; // Use back camera on mobile
     
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         // Validate file type
@@ -163,20 +186,24 @@ export const PostForm = ({
           return;
         }
         
-        // Validate file size (5MB max)
-        if (file.size > 5 * 1024 * 1024) {
-          alert('Image size must be less than 5MB');
+        // Validate file size (10MB max before compression)
+        if (file.size > 10 * 1024 * 1024) {
+          alert('Image size must be less than 10MB');
           return;
         }
         
-        setSelectedFile(file);
+        // Compress the image
+        setUploading(true);
+        const compressedFile = await compressImage(file);
+        setSelectedFile(compressedFile);
+        setUploading(false);
         
         // Create preview
         const reader = new FileReader();
         reader.onloadend = () => {
           setImagePreview(reader.result as string);
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressedFile);
       }
     };
     
