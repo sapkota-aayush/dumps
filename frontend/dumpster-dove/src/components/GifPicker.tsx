@@ -22,6 +22,18 @@ interface GifResult {
     original: {
       url: string;
     };
+    downsized_medium?: {
+      url: string;
+    };
+    downsized?: {
+      url: string;
+    };
+    downsized_large?: {
+      url: string;
+    };
+    fixed_width?: {
+      url: string;
+    };
   };
 }
 
@@ -109,7 +121,14 @@ export const GifPicker = ({ open, onOpenChange, onSelect }: GifPickerProps) => {
                 <button
                   key={gif.id}
                   onClick={() => {
-                    onSelect(gif.images.original.url);
+                    // Try smaller versions first: downsized_large has 2MB max, downsized has no limit but compressed
+                    const gifUrl = 
+                      gif.images.downsized_large?.url ||  // Max 2MB
+                      gif.images.downsized_medium?.url || // Usually < 1MB
+                      gif.images.downsized?.url ||        // Compressed but can be large
+                      gif.images.fixed_width?.url ||      // Fixed size
+                      gif.images.original.url;             // Fallback
+                    onSelect(gifUrl);
                     onOpenChange(false);
                   }}
                   className="relative aspect-video rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
