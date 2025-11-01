@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Home, Search, Bell, Megaphone, Hash } from "lucide-react";
+import { Home, Search, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -100,32 +100,6 @@ export const BottomNav = ({ onHashtagSearch, allHashtags = [] }: BottomNavProps)
               className="flex-1 h-12 rounded-lg hover:bg-accent transition-all"
             >
               <Search className="w-5 h-5" />
-            </Button>
-
-            {/* Notifications Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                // TODO: Navigate to notifications page
-              }}
-              aria-label="Notifications"
-              className="flex-1 h-12 rounded-lg hover:bg-accent transition-all"
-            >
-              <Bell className="w-5 h-5" />
-            </Button>
-
-            {/* Announcements Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                // TODO: Navigate to announcements page
-              }}
-              aria-label="Announcements"
-              className="flex-1 h-12 rounded-lg hover:bg-accent transition-all"
-            >
-              <Megaphone className="w-5 h-5" />
             </Button>
           </div>
         </div>
