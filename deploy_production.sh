@@ -1,22 +1,21 @@
 #!/bin/bash
-# Complete Production Deployment Script for Dumps.online
-# Run this on your EC2 instance after SSH access is restored
+# Production Deployment Script for Dumps.online
 
 set -e  # Exit on any error
 
 echo "=================================================="
-echo "🚀 Starting Dumps.online Production Deployment"
+echo "Starting Dumps.online Production Deployment"
 echo "=================================================="
 
 # Navigate to project directory
 cd /home/ubuntu/dumps
 
 echo ""
-echo "📥 Step 1: Pulling latest code from GitHub..."
+echo "Step 1: Pulling latest code from GitHub..."
 git pull origin main
 
 echo ""
-echo "🛠️  Step 2: Setting up Backend..."
+echo "Step 2: Setting up Backend..."
 cd backend
 
 # Activate virtual environment
@@ -28,7 +27,7 @@ pip install -r ../requirements.txt --break-system-packages 2>/dev/null || pip in
 
 # Check if .env exists
 if [ ! -f .env ]; then
-    echo "❌ ERROR: backend/.env file is missing!"
+    echo "ERROR: backend/.env file is missing!"
     echo "Please create it with your DATABASE_URL and AWS credentials"
     exit 1
 fi
@@ -45,13 +44,13 @@ sleep 3
 
 # Check if backend is running
 if curl -s http://localhost:8000/health > /dev/null; then
-    echo "✅ Backend is running!"
+    echo "Backend is running!"
 else
-    echo "⚠️  Backend health check failed, but continuing..."
+    echo "WARNING: Backend health check failed, but continuing..."
 fi
 
 echo ""
-echo "🎨 Step 3: Setting up Frontend..."
+echo "Step 3: Setting up Frontend..."
 cd /home/ubuntu/dumps/frontend/dumpster-dove
 
 # Install dependencies
@@ -64,14 +63,14 @@ npm run build
 
 # Verify build exists
 if [ ! -d "dist" ]; then
-    echo "❌ ERROR: Frontend build failed - dist directory not found!"
+    echo "ERROR: Frontend build failed - dist directory not found!"
     exit 1
 fi
 
-echo "✅ Frontend built successfully!"
+echo "Frontend built successfully!"
 
 echo ""
-echo "🌐 Step 4: Configuring Nginx..."
+echo "Step 4: Configuring Nginx..."
 cd /home/ubuntu/dumps
 
 # Copy nginx config
@@ -91,40 +90,40 @@ echo "Reloading Nginx..."
 sudo systemctl reload nginx
 
 echo ""
-echo "🔍 Step 5: Checking Services Status..."
+echo "Step 5: Checking Services Status..."
 
 # Check PostgreSQL
 if sudo systemctl is-active --quiet postgresql; then
-    echo "✅ PostgreSQL is running"
+    echo "PostgreSQL is running"
 else
-    echo "⚠️  PostgreSQL is not running. Starting..."
+    echo "WARNING: PostgreSQL is not running. Starting..."
     sudo systemctl start postgresql
 fi
 
 # Check Nginx
 if sudo systemctl is-active --quiet nginx; then
-    echo "✅ Nginx is running"
+    echo "Nginx is running"
 else
-    echo "⚠️  Nginx is not running. Starting..."
+    echo "WARNING: Nginx is not running. Starting..."
     sudo systemctl start nginx
 fi
 
 # Check Backend
 if screen -list | grep -q "backend"; then
-    echo "✅ Backend screen session is active"
+    echo "Backend screen session is active"
 else
-    echo "⚠️  Backend screen session not found"
+    echo "WARNING: Backend screen session not found"
 fi
 
 echo ""
-echo "📊 Step 6: Service URLs..."
+echo "Step 6: Service URLs..."
 echo "   Frontend: https://dumps.online"
 echo "   Backend Health: https://dumps.online/api/posts/health"
 echo "   Backend API: https://dumps.online/api/"
 
 echo ""
 echo "=================================================="
-echo "✨ Deployment Complete!"
+echo "Deployment Complete!"
 echo "=================================================="
 echo ""
 echo "Useful commands:"
