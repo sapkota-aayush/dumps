@@ -78,6 +78,7 @@ export const PostCard = ({ post, onReact, onHashtagClick, onEdit, onDelete, curr
                 size="icon"
                 className="h-7 w-7"
                 onClick={() => onEdit(post.id)}
+                aria-label="Edit post"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </Button>
@@ -86,6 +87,7 @@ export const PostCard = ({ post, onReact, onHashtagClick, onEdit, onDelete, curr
                 size="icon"
                 className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => onDelete(post.id)}
+                aria-label="Delete post"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>

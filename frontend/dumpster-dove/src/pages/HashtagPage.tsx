@@ -322,6 +322,7 @@ const HashtagPage = () => {
       {/* Floating Action Button */}
       <Button
         onClick={() => setIsFormOpen(true)}
+        aria-label="Create new post"
         className={cn(
           "fixed right-6 h-16 w-16 rounded-full shadow-lg hover:shadow-xl bg-primary hover:bg-primary/90 hover:scale-110 transition-all duration-200 z-50",
           "bottom-24"
