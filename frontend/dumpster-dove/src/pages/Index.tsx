@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import FloatingCards from "@/components/FloatingCards";
+import InstallButton from "@/components/InstallButton";
 
 const Index = () => {
   return (
@@ -30,7 +31,7 @@ const Index = () => {
           </div>
           
           {/* CTA Button - Mobile optimized */}
-          <div className="animate-fade-in-up pt-2" style={{ animationDelay: "300ms" }}>
+          <div className="animate-fade-in-up pt-2 flex flex-col gap-3 items-center" style={{ animationDelay: "300ms" }}>
             <Link to="/feed">
               <Button 
                 size="lg"
@@ -39,6 +40,7 @@ const Index = () => {
                 Enter Dumps
               </Button>
             </Link>
+            <InstallButton />
           </div>
           
           {/* Stats and tagline - Mobile optimized */}
