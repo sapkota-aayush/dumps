@@ -98,3 +98,43 @@ async def get_wild_thoughts_count(db: Session = Depends(get_db)):
         "total": count
     }
 
+@router.get("/wild-thoughts")
+async def get_wild_thoughts(
+    page: int = 1,
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+    """
+    Get paginated list of wild thoughts (newest first).
+    Returns content and created_at only (anonymous - no IP).
+    """
+    offset = (page - 1) * limit
+    
+    # Get thoughts ordered by newest first
+    thoughts = db.query(WildThought)\
+        .order_by(WildThought.created_at.desc())\
+        .offset(offset)\
+        .limit(limit)\
+        .all()
+    
+    # Get total count
+    total = db.query(WildThought).count()
+    
+    # Format response (only include content and created_at - keep anonymous)
+    thoughts_data = [
+        {
+            "id": thought.id,
+            "content": thought.content,
+            "created_at": thought.created_at.isoformat() if thought.created_at else None
+        }
+        for thought in thoughts
+    ]
+    
+    return {
+        "thoughts": thoughts_data,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "has_more": offset + len(thoughts) < total
+    }
+

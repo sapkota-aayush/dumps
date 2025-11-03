@@ -6,12 +6,20 @@ import { apiService } from "@/services/api";
 import { Sparkles, MessageSquare, Hash, Shield, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
+interface WildThought {
+  id: number;
+  content: string;
+  created_at: string | null;
+}
+
 const ComingSoon = () => {
   const [scanPosition, setScanPosition] = useState<number | null>(null);
   const [totalScans, setTotalScans] = useState<number>(0);
   const [wildThought, setWildThought] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wildThoughtsCount, setWildThoughtsCount] = useState(0);
+  const [wildThoughts, setWildThoughts] = useState<WildThought[]>([]);
+  const [isLoadingThoughts, setIsLoadingThoughts] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [hasTracked, setHasTracked] = useState(false);
 
@@ -63,6 +71,23 @@ const ComingSoon = () => {
     trackScan();
   }, []);
 
+  // Fetch wild thoughts
+  useEffect(() => {
+    const fetchWildThoughts = async () => {
+      setIsLoadingThoughts(true);
+      try {
+        const result = await apiService.getWildThoughts(1, 20);
+        setWildThoughts(result.thoughts);
+      } catch (error) {
+        console.error("Failed to fetch wild thoughts:", error);
+      } finally {
+        setIsLoadingThoughts(false);
+      }
+    };
+
+    fetchWildThoughts();
+  }, []);
+
   const handleSubmitWildThought = async () => {
     if (!wildThought.trim()) {
       toast.error("Write something first!");
@@ -79,8 +104,14 @@ const ComingSoon = () => {
       const result = await apiService.submitWildThought(wildThought.trim());
       toast.success(result.message);
       setWildThought("");
+      
+      // Refresh counts and thoughts list
       const wtCount = await apiService.getWildThoughtsCount();
       setWildThoughtsCount(wtCount.total);
+      
+      // Fetch updated thoughts list
+      const thoughtsResult = await apiService.getWildThoughts(1, 20);
+      setWildThoughts(thoughtsResult.thoughts);
     } catch (error: any) {
       toast.error(error.message || "Failed to submit your thought");
     } finally {
@@ -125,6 +156,28 @@ const ComingSoon = () => {
         return `${num}rd`;
       default:
         return `${num}th`;
+    }
+  };
+
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return "Just now";
+    
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    } catch {
+      return "Recently";
     }
   };
 
@@ -244,12 +297,7 @@ const ComingSoon = () => {
               </span>
             </div>
             <CardDescription className="text-sm">
-              Dump one of your wildest thoughts here - try how it feels before launch! Completely anonymous, no one will know it's you.
-              {wildThoughtsCount > 0 && (
-                <span className="block mt-2 font-semibold text-primary">
-                  {wildThoughtsCount} thought{wildThoughtsCount !== 1 ? 's' : ''} already dumped! 🎉
-                </span>
-              )}
+              Share your thoughts completely anonymously - no one will know it's you.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
@@ -283,8 +331,68 @@ const ComingSoon = () => {
           </CardContent>
         </Card>
 
+        {/* See All Anon Dumps Section */}
+        <Card className="mb-6 sm:mb-8 border-2 shadow-lg bg-gradient-to-br from-background to-muted/50 animate-fade-in-up" style={{ animationDelay: "1000ms" }}>
+          <CardHeader className="p-4 sm:p-6 pb-3">
+            <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+              See all the anon dumps so far
+            </CardTitle>
+            <CardDescription className="text-sm">
+              {wildThoughtsCount > 0 
+                ? `${wildThoughtsCount} anonymous ${wildThoughtsCount === 1 ? 'thought' : 'thoughts'} dumped!`
+                : "No thoughts yet - be the first!"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            {isLoadingThoughts ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <div className="animate-spin text-2xl mb-2">⏳</div>
+                <p>Loading thoughts...</p>
+              </div>
+            ) : wildThoughts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-base sm:text-lg font-semibold">Be the first to dump your wildest thought!</p>
+                <p className="text-sm mt-2">Share what's on your mind - completely anonymous</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                {wildThoughts.map((thought, index) => (
+                  <div
+                    key={thought.id}
+                    className="relative group"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <Card className="border-l-4 border-l-primary/60 bg-gradient-to-r from-card/80 to-card/40 hover:from-card hover:to-card shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
+                      <CardContent className="p-5 sm:p-6">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2 opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm sm:text-base whitespace-pre-wrap break-words text-foreground leading-relaxed">
+                              {thought.content}
+                            </p>
+                            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
+                              <span className="text-xs text-muted-foreground font-medium">
+                                Anonymous
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(thought.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Share Button with animation */}
-        <div className="flex justify-center items-center mb-6 sm:mb-8 animate-fade-in-up" style={{ animationDelay: "1000ms" }}>
+        <div className="flex justify-center items-center mb-6 sm:mb-8 animate-fade-in-up" style={{ animationDelay: "1200ms" }}>
           <Button
             size="lg"
             variant="outline"
@@ -297,7 +405,7 @@ const ComingSoon = () => {
         </div>
 
         {/* Footer stats with animated counter */}
-        <div className="text-center text-muted-foreground space-y-2 pb-4 sm:pb-6 animate-fade-in-up" style={{ animationDelay: "1200ms" }}>
+        <div className="text-center text-muted-foreground space-y-2 pb-4 sm:pb-6 animate-fade-in-up" style={{ animationDelay: "1400ms" }}>
           <p className="text-sm sm:text-base">
             Join{" "}
             <span className="font-bold text-primary animate-pulse inline-block">

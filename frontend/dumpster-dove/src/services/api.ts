@@ -238,6 +238,26 @@ class ApiService {
   async getWildThoughtsCount(): Promise<{ total: number }> {
     return this.request<{ total: number }>('/api/scans/wild-thoughts/count');
   }
+
+  async getWildThoughts(page: number = 1, limit: number = 20): Promise<{
+    thoughts: Array<{ id: number; content: string; created_at: string | null }>;
+    total: number;
+    page: number;
+    limit: number;
+    has_more: boolean;
+  }> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    return this.request<{
+      thoughts: Array<{ id: number; content: string; created_at: string | null }>;
+      total: number;
+      page: number;
+      limit: number;
+      has_more: boolean;
+    }>(`/api/scans/wild-thoughts?${params.toString()}`);
+  }
 }
 
 export const apiService = new ApiService();
