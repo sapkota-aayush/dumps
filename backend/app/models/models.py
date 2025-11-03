@@ -18,3 +18,19 @@ class Post(Base):
         "laugh": 0,
         "angry": 0
     })
+
+class ScanTracker(Base):
+    __tablename__ = "scan_tracker"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String(45), nullable=True)  # IPv6 can be up to 45 chars
+    user_agent = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class WildThought(Base):
+    __tablename__ = "wild_thoughts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    ip_address = Column(String(45), nullable=True)

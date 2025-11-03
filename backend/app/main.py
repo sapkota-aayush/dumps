@@ -56,6 +56,10 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 from app.api.routes import auth
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 
+# Add scans router for QR code tracking
+from app.api.routes import scans
+app.include_router(scans.router, prefix="/api/scans", tags=["scans"])
+
 # Serve uploaded images
 uploads_path = os.path.join(os.path.dirname(__file__), "..", "uploads")
 if os.path.exists(uploads_path):

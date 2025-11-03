@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Feed from "./pages/Feed";
 import HashtagPage from "./pages/HashtagPage";
+import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/hashtag/:hashtag" element={<HashtagPage />} />
+          <Route path="/coming-soon" element={<ComingSoon />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

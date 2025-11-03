@@ -215,6 +215,29 @@ class ApiService {
       throw error;
     }
   }
+
+  // Scan tracking
+  async trackScan(): Promise<{ position: number; total: number; message: string }> {
+    return this.request<{ position: number; total: number; message: string }>('/api/scans/track', {
+      method: 'POST',
+    });
+  }
+
+  async getScanCount(): Promise<{ total: number }> {
+    return this.request<{ total: number }>('/api/scans/count');
+  }
+
+  // Wild thoughts
+  async submitWildThought(content: string): Promise<{ success: boolean; message: string; id: number }> {
+    return this.request<{ success: boolean; message: string; id: number }>('/api/scans/wild-thought', {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async getWildThoughtsCount(): Promise<{ total: number }> {
+    return this.request<{ total: number }>('/api/scans/wild-thoughts/count');
+  }
 }
 
 export const apiService = new ApiService();
