@@ -23,6 +23,10 @@ const HashtagPage = () => {
     new Set(posts.map((post) => post.hashtag))
   ).sort();
 
+  // Scroll to top when component mounts or hashtag changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [hashtag]);
 
   // Load posts for this hashtag
   useEffect(() => {
@@ -228,17 +232,28 @@ const HashtagPage = () => {
     );
   }
 
+  // Scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-safe">
       {/* Header - Same as Feed */}
-      <header className="bg-card border-b-2 border-primary/30 shadow-xl">
-        <div className="max-w-2xl mx-auto px-6 py-6 text-center">
-          <h1 className="text-3xl font-black text-primary tracking-tight uppercase">
-            Dumps.online
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2 font-medium">
-            Dump your thoughts anonymously.
-          </p>
+      <header className="bg-card border-b-2 border-primary/30 shadow-xl sticky top-0 z-40">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 text-center min-h-[100px] flex flex-col justify-center">
+          <button
+            onClick={scrollToTop}
+            className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg transition-transform hover:scale-105 active:scale-95"
+            aria-label="Scroll to top"
+          >
+            <h1 className="text-2xl sm:text-3xl font-black text-primary tracking-tight uppercase break-words">
+              Dumps.online
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2 font-medium break-words px-2">
+              Dump your thoughts anonymously.
+            </p>
+          </button>
         </div>
       </header>
 
@@ -311,7 +326,10 @@ const HashtagPage = () => {
 
       {/* Back to All button */}
       <Button
-        onClick={() => navigate('/feed')}
+        onClick={() => {
+          navigate('/feed');
+          scrollToTop();
+        }}
         className="fixed bottom-36 right-6 h-14 w-14 rounded-lg shadow-lg hover:shadow-xl bg-secondary hover:bg-secondary/90 hover:scale-110 transition-all duration-200 z-40"
         size="icon"
         title="Back to all posts"

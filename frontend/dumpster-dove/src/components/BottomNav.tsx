@@ -79,7 +79,19 @@ export const BottomNav = ({ onHashtagSearch, allHashtags = [] }: BottomNavProps)
             <Button
               variant={isFeed ? "default" : "ghost"}
               size="icon"
-              onClick={() => navigate("/feed")}
+              onClick={() => {
+                if (isFeed) {
+                  // Already on feed page, just scroll to top
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  // Navigate to feed and scroll to top
+                  navigate("/feed");
+                  // Small delay to ensure navigation completes before scrolling
+                  setTimeout(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }, 100);
+                }
+              }}
               aria-label="Home"
               className={cn(
                 "flex-1 h-12 rounded-lg transition-all",
