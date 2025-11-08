@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,7 +46,43 @@ export const PostForm = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const dialogContentRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard detection for mobile
+  useEffect(() => {
+    if (!open) return;
+
+    const handleResize = () => {
+      // Detect keyboard by comparing window height to visual viewport
+      if (window.visualViewport) {
+        const heightDiff = window.innerHeight - window.visualViewport.height;
+        setKeyboardVisible(heightDiff > 150); // Keyboard is likely visible if height diff > 150px
+      }
+    };
+
+    const handleFocus = (e: FocusEvent) => {
+      // Scroll input into view when focused on mobile
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300); // Delay to allow keyboard to open
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.visualViewport?.addEventListener('resize', handleResize);
+    document.addEventListener('focusin', handleFocus);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      document.removeEventListener('focusin', handleFocus);
+    };
+  }, [open]);
 
   // Update state when dialog opens or closes
   useEffect(() => {
@@ -59,8 +95,8 @@ export const PostForm = ({
         setHashtagInput(initialHashtags.join(" "));
         setImagePreview(initialImage || null);
       }
-      // Don't auto-focus on mobile to avoid cursor jumping
-      // Users can tap to focus when needed
+      // Reset keyboard state when opening
+      setKeyboardVisible(false);
     } else {
       // Reset form when closing
       if (!editMode) {
@@ -70,12 +106,13 @@ export const PostForm = ({
         setImagePreview(null);
         setAuthorType("anonymous");
       }
+      setKeyboardVisible(false);
     }
   }, [open, editMode, initialContent, initialAuthor, initialIsAnonymous, initialHashtags, initialImage]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (content.trim()) {
+    if (content.trim() && !uploading) {
       const author = authorType === "anonymous" ? "Anonymous" : fictionalName.trim() || "Anonymous";
       
       // Parse hashtags from input
@@ -118,11 +155,11 @@ export const PostForm = ({
       setAuthorType("anonymous");
       onOpenChange(false);
     }
-  };
+  }, [content, authorType, fictionalName, lockHashtag, hashtagInput, selectedFile, imagePreview, uploading, onSubmit, onOpenChange]);
 
-  const remainingChars = 280 - content.length;
+  const remainingChars = useMemo(() => 280 - content.length, [content]);
 
-  const compressImage = async (file: File): Promise<File> => {
+  const compressImage = useCallback(async (file: File): Promise<File> => {
     const options = {
       maxSizeMB: 0.3,          // Target 300KB max
       maxWidthOrHeight: 1920,   // Max dimension
@@ -132,15 +169,14 @@ export const PostForm = ({
     
     try {
       const compressedFile = await imageCompression(file, options);
-      console.log(`Original: ${(file.size / 1024 / 1024).toFixed(2)}MB → Compressed: ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
       return compressedFile;
     } catch (error) {
       console.error('Image compression failed:', error);
       return file; // Return original if compression fails
     }
-  };
+  }, []);
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
@@ -155,22 +191,28 @@ export const PostForm = ({
         return;
       }
       
-      // Compress the image
+      // Compress the image asynchronously without blocking UI
       setUploading(true);
-      const compressedFile = await compressImage(file);
-      setSelectedFile(compressedFile);
-      setUploading(false);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(compressedFile);
+      compressImage(file).then((compressedFile) => {
+        setSelectedFile(compressedFile);
+        setUploading(false);
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(compressedFile);
+      }).catch((error) => {
+        console.error('Error processing image:', error);
+        setUploading(false);
+      });
     }
-  };
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  }, [compressImage]);
 
-  const handleCameraCapture = () => {
+  const handleCameraCapture = useCallback(() => {
     // Create a hidden file input with camera capture
     const input = document.createElement('input');
     input.type = 'file';
@@ -192,47 +234,65 @@ export const PostForm = ({
           return;
         }
         
-        // Compress the image
+        // Compress the image asynchronously
         setUploading(true);
-        const compressedFile = await compressImage(file);
-        setSelectedFile(compressedFile);
-        setUploading(false);
-        
-        // Create preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result as string);
-        };
-        reader.readAsDataURL(compressedFile);
+        compressImage(file).then((compressedFile) => {
+          setSelectedFile(compressedFile);
+          setUploading(false);
+          
+          // Create preview
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+          };
+          reader.readAsDataURL(compressedFile);
+        }).catch((error) => {
+          console.error('Error processing image:', error);
+          setUploading(false);
+        });
       }
     };
     
     // Trigger the camera/file picker
     input.click();
-  };
+  }, [compressImage]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mx-0 sm:mx-auto rounded-none sm:rounded-lg h-[100vh] sm:h-auto w-full sm:w-auto">
-        <DialogHeader>
+      <DialogContent 
+        ref={dialogContentRef}
+        className="sm:max-w-[500px] max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden mx-0 sm:mx-auto rounded-none sm:rounded-lg h-[100dvh] sm:h-auto w-full sm:w-auto p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col will-change-transform max-sm:left-0 max-sm:top-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-none"
+        style={{
+          maxHeight: keyboardVisible && window.visualViewport 
+            ? `${window.visualViewport.height}px` 
+            : undefined
+        }}
+      >
+        <DialogHeader className="flex-shrink-0 pb-3">
           <DialogTitle className="text-base font-semibold">{editMode ? "Edit" : "New post"}</DialogTitle>
           <DialogDescription className="sr-only">
             {editMode ? "Edit your post content" : "Create a new post"}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form ref={formRef} onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-3 min-h-0">
           <Textarea
             ref={textareaRef}
             placeholder="What's happening?"
             value={content}
             onChange={(e) => setContent(e.target.value.slice(0, 280))}
-            className="min-h-[120px] resize-none border focus-visible:ring-2 focus-visible:ring-ring p-3 text-base"
+            className="min-h-[120px] resize-none border focus-visible:ring-2 focus-visible:ring-ring p-3 text-base flex-shrink-0"
             onKeyDown={(e) => {
               // Auto-submit on mobile when user presses "Done" or "Enter"
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 handleSubmit(e);
               }
+            }}
+            onFocus={(e) => {
+              // Scroll textarea into view when focused on mobile
+              setTimeout(() => {
+                e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 300);
             }}
             autoComplete="off"
             autoCorrect="off"
@@ -242,12 +302,12 @@ export const PostForm = ({
           />
 
           {imagePreview && (
-            <div className="relative rounded-lg overflow-hidden border">
+            <div className="relative rounded-lg overflow-hidden border flex-shrink-0">
               <img 
                 src={imagePreview} 
                 alt="Preview" 
                 loading="lazy"
-                className="w-full max-h-64 object-cover"
+                className="w-full max-h-48 sm:max-h-64 object-cover"
               />
               <Button
                 type="button"
@@ -262,17 +322,18 @@ export const PostForm = ({
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row items-center justify-between pt-3 border-t gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between pt-3 border-t gap-3 flex-shrink-0">
             <div className="flex items-center gap-2">
               <label htmlFor="image-upload">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10"
+                  className="h-10 w-10 touch-manipulation"
                   onClick={() => document.getElementById('image-upload')?.click()}
                   aria-label="Upload image"
                   title="Upload Image"
+                  disabled={uploading}
                 >
                   <ImageIcon className="h-5 w-5 text-primary" />
                 </Button>
@@ -281,10 +342,11 @@ export const PostForm = ({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10"
+                className="h-10 w-10 touch-manipulation"
                 onClick={handleCameraCapture}
                 aria-label="Take photo or select from gallery"
                 title="Take Photo or Select from Gallery"
+                disabled={uploading}
               >
                 <Camera className="h-5 w-5 text-primary" />
               </Button>
@@ -292,10 +354,11 @@ export const PostForm = ({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10"
+                className="h-10 w-10 touch-manipulation"
                 onClick={() => setGifPickerOpen(true)}
                 aria-label="Search GIFs"
                 title="Search GIFs"
+                disabled={uploading}
               >
                 <FileVideo className="h-5 w-5 text-primary" />
               </Button>
@@ -316,7 +379,7 @@ export const PostForm = ({
                 type="submit" 
                 disabled={!content.trim() || remainingChars < 0 || uploading} 
                 size="sm" 
-                className="rounded-full min-w-[90px] h-10 text-sm font-medium"
+                className="rounded-full min-w-[90px] h-10 text-sm font-medium touch-manipulation"
               >
                 {uploading ? (
                   <>
@@ -330,7 +393,7 @@ export const PostForm = ({
             </div>
           </div>
 
-          <div className="space-y-3 pt-3 border-t">
+          <div className="space-y-3 pt-3 border-t flex-shrink-0 pb-2">
             <div>
               <Label className="text-sm mb-2 block">Post as</Label>
               <RadioGroup value={authorType} onValueChange={(value) => setAuthorType(value as "anonymous" | "fictional")} className="gap-2">
@@ -352,6 +415,11 @@ export const PostForm = ({
                   placeholder="Enter name..."
                   value={fictionalName}
                   onChange={(e) => setFictionalName(e.target.value.slice(0, 30))}
+                  onFocus={(e) => {
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                  }}
                   className="mt-2 h-9 text-sm"
                 />
               )}
@@ -364,6 +432,11 @@ export const PostForm = ({
                 value={hashtagInput}
                 onChange={(e) => setHashtagInput(e.target.value)}
                 disabled={lockHashtag}
+                onFocus={(e) => {
+                  setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 300);
+                }}
                 className="h-9 text-sm"
               />
               {lockHashtag && (

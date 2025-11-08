@@ -150,4 +150,25 @@ All colors MUST be HSL.
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
   }
+
+  /* Mobile dialog keyboard handling */
+  @media (max-width: 640px) {
+    /* Better mobile input handling - prevent zoom on iOS */
+    input[type="text"],
+    input[type="search"],
+    textarea {
+      font-size: 16px;
+    }
+
+    /* Smooth scrolling for mobile */
+    * {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Improve scroll performance on mobile */
+    .overflow-y-auto {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+  }
 }
