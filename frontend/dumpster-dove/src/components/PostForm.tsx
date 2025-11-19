@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -157,7 +157,7 @@ export const PostForm = ({
     }
   }, [content, authorType, fictionalName, lockHashtag, hashtagInput, selectedFile, imagePreview, uploading, onSubmit, onOpenChange]);
 
-  const remainingChars = useMemo(() => 280 - content.length, [content]);
+  const remainingChars = 2000 - content.length;
 
   const compressImage = useCallback(async (file: File): Promise<File> => {
     const options = {
@@ -268,18 +268,26 @@ export const PostForm = ({
             : undefined
         }}
       >
-        <DialogHeader className="flex-shrink-0 pb-3">
-          <DialogTitle className="text-base font-semibold">{editMode ? "Edit" : "New post"}</DialogTitle>
+        <DialogHeader className="relative flex-shrink-0 pb-3">
+          <DialogTitle className="text-base font-semibold pr-10">{editMode ? "Edit" : "New post"}</DialogTitle>
           <DialogDescription className="sr-only">
             {editMode ? "Edit your post content" : "Create a new post"}
           </DialogDescription>
+          {/* Mobile-friendly close button in header */}
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center rounded-md opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 touch-manipulation sm:hidden bg-accent/50"
+            aria-label="Close"
+          >
+            <X className="h-6 w-6" />
+          </button>
         </DialogHeader>
         <form ref={formRef} onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-3 min-h-0">
           <Textarea
             ref={textareaRef}
             placeholder="What's happening?"
             value={content}
-            onChange={(e) => setContent(e.target.value.slice(0, 280))}
+            onChange={(e) => setContent(e.target.value.slice(0, 2000))}
             className="min-h-[120px] resize-none border focus-visible:ring-2 focus-visible:ring-ring p-3 text-base flex-shrink-0"
             onKeyDown={(e) => {
               // Auto-submit on mobile when user presses "Done" or "Enter"
@@ -372,7 +380,7 @@ export const PostForm = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <span className={`text-sm ${remainingChars < 20 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+              <span className={`text-sm ${remainingChars < 100 ? "text-destructive font-medium" : remainingChars < 500 ? "text-yellow-600 font-medium" : "text-muted-foreground"}`}>
                 {remainingChars}
               </span>
               <Button 

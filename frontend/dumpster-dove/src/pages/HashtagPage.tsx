@@ -25,13 +25,20 @@ const HashtagPage = () => {
 
   // Scroll to top when component mounts or hashtag changes
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    // Use requestAnimationFrame to ensure smooth scroll
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    });
   }, [hashtag]);
 
   // Load posts for this hashtag
   useEffect(() => {
     const loadPosts = async () => {
       if (!hashtag) return;
+      
+      // Close any open dialogs when navigating
+      setIsFormOpen(false);
+      setEditingPost(null);
       
       // Try to load cached posts first for instant display
       const cacheKey = `cached_posts_${hashtag}`;
@@ -40,6 +47,7 @@ const HashtagPage = () => {
       if (cachedPosts) {
         try {
           const parsedPosts = JSON.parse(cachedPosts);
+          // Set posts immediately without loading state to prevent layout shift
           setPosts(parsedPosts);
           setLoading(false);
           
@@ -52,13 +60,18 @@ const HashtagPage = () => {
           console.error("Failed to parse cached posts:", err);
           // Fallback to normal loading
           setLoading(true);
-          const response = await apiService.getHashtagPosts(hashtag);
-          setPosts(response.posts);
-          localStorage.setItem(cacheKey, JSON.stringify(response.posts));
-          setLoading(false);
+          try {
+            const response = await apiService.getHashtagPosts(hashtag);
+            setPosts(response.posts);
+            localStorage.setItem(cacheKey, JSON.stringify(response.posts));
+          } catch (loadErr) {
+            console.error("Failed to load posts:", loadErr);
+          } finally {
+            setLoading(false);
+          }
         }
       } else {
-        // No cache, load normally
+        // No cache, show loading but minimize layout shift
         setLoading(true);
         try {
           const response = await apiService.getHashtagPosts(hashtag);
@@ -187,8 +200,18 @@ const HashtagPage = () => {
   };
 
   const handleHashtagClick = (hashtag: string) => {
+    // Close any open dialogs before navigating
+    setIsFormOpen(false);
+    setEditingPost(null);
+    
+    // Prevent default if it's a link
     // Navigate to another hashtag page
-    navigate(`/hashtag/${hashtag}`);
+    navigate(`/hashtag/${hashtag}`, { replace: false });
+    
+    // Scroll to top smoothly after navigation
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   };
 
   const handleEdit = async (postId: number, updatedContent: string) => {
@@ -221,9 +244,10 @@ const HashtagPage = () => {
     }
   };
 
-  if (loading) {
+  // Show loading state but keep layout to prevent shifts
+  if (loading && posts.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center pb-safe">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading posts...</p>
@@ -240,18 +264,18 @@ const HashtagPage = () => {
   return (
     <div className="min-h-screen bg-background pb-safe">
       {/* Header - Same as Feed */}
-      <header className="bg-card border-b-2 border-primary/30 shadow-xl sticky top-0 z-40">
+      <header className="bg-card border-b-2 border-primary/30 shadow-xl sticky top-0 z-40 will-change-transform">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 text-center min-h-[100px] flex flex-col justify-center">
           <button
             onClick={scrollToTop}
-            className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg transition-transform hover:scale-105 active:scale-95"
+            className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg transition-transform hover:scale-105 active:scale-95 touch-manipulation"
             aria-label="Scroll to top"
           >
             <h1 className="text-2xl sm:text-3xl font-black text-primary tracking-tight uppercase break-words">
-              Dumps.online
+              #{hashtag || 'Dumps'}
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2 font-medium break-words px-2">
-              Dump your thoughts anonymously.
+              Posts tagged with #{hashtag}
             </p>
           </button>
         </div>
@@ -273,8 +297,18 @@ const HashtagPage = () => {
                 key={tag}
                 variant={hashtag === tag ? "default" : "outline"}
                 size="sm"
-                onClick={() => navigate(`/hashtag/${tag}`)}
-                className="relative"
+                onClick={() => {
+                  // Close any open dialogs
+                  setIsFormOpen(false);
+                  setEditingPost(null);
+                  // Navigate
+                  navigate(`/hashtag/${tag}`);
+                  // Scroll to top
+                  requestAnimationFrame(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  });
+                }}
+                className="relative touch-manipulation"
               >
                 #{tag}
               </Button>

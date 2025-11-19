@@ -170,5 +170,28 @@ All colors MUST be HSL.
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
     }
+
+    /* Prevent layout shifts during navigation */
+    header {
+      contain: layout style paint;
+    }
+
+    /* Smooth transitions for navigation */
+    main {
+      will-change: contents;
+    }
+  }
+
+  /* Prevent layout shifts on hashtag navigation */
+  .hashtag-button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Smooth page transitions */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 }

@@ -505,8 +505,17 @@ const Feed = () => {
                 post={post}
                 onReact={(postId, reaction) => handleReact(postId, reaction)}
                 onHashtagClick={(hashtag) => {
+                  // Close any open dialogs before navigating
+                  setIsFormOpen(false);
+                  setEditingPost(null);
+                  
                   // Navigate to hashtag page using React Router
                   navigate(`/hashtag/${hashtag}`);
+                  
+                  // Scroll to top smoothly after navigation
+                  requestAnimationFrame(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  });
                 }}
                 onEdit={(postId) => handleEditPost(postId)}
                 onDelete={(postId) => handleDeletePost(postId)}

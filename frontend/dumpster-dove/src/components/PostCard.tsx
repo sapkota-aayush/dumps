@@ -113,8 +113,12 @@ export const PostCard = ({ post, onReact, onHashtagClick, onEdit, onDelete, curr
         
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => onHashtagClick(post.hashtag)}
-            className="text-xs px-3 py-1.5 rounded-md bg-secondary border border-border hover:border-primary/50 text-foreground hover:text-primary transition-all duration-200 font-medium"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onHashtagClick(post.hashtag);
+            }}
+            className="text-xs px-3 py-1.5 rounded-md bg-secondary border border-border hover:border-primary/50 text-foreground hover:text-primary transition-all duration-200 font-medium touch-manipulation active:scale-95"
           >
             #{post.hashtag}
           </button>
