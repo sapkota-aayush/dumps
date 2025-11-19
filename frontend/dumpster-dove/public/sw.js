@@ -1,6 +1,6 @@
 // Service Worker with Cache Versioning and Update Handling
 // Increment CACHE_VERSION whenever you deploy changes
-const CACHE_VERSION = 'v2'; // Change this when deploying updates
+const CACHE_VERSION = 'v3'; // Change this when deploying updates
 const CACHE_NAME = `dumps-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = 'dumps-runtime';
 
