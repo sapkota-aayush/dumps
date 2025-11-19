@@ -125,7 +125,7 @@ export const BottomNav = ({ onHashtagSearch, allHashtags = [] }: BottomNavProps)
           setShowSuggestions(false);
         }
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="mobile-search-dialog sm:max-w-md w-full sm:w-auto mx-0 sm:mx-auto rounded-none sm:rounded-lg top-0 sm:top-[50%] translate-y-0 sm:translate-y-[-50%] max-h-[100vh] sm:max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Search Hashtags & Posts</DialogTitle>
           </DialogHeader>
@@ -141,7 +141,7 @@ export const BottomNav = ({ onHashtagSearch, allHashtags = [] }: BottomNavProps)
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                className="pl-10"
+                className="pl-10 text-[16px] sm:text-sm"
                 autoFocus
               />
               
