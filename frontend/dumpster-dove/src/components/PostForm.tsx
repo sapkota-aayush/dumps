@@ -79,8 +79,8 @@ export const PostForm = ({
     }
   }, [open, editMode, initialContent, initialAuthor, initialIsAnonymous, initialHashtags, initialImage]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (content.trim() && !uploading) {
       const author = authorType === "anonymous" ? "Anonymous" : fictionalName.trim() || "Anonymous";
       
@@ -213,19 +213,79 @@ export const PostForm = ({
         className="mobile-post-dialog sm:max-w-[550px] w-full h-[100vh] sm:h-auto max-h-[100vh] sm:max-h-[90vh] overflow-hidden mx-0 sm:mx-auto rounded-none sm:rounded-lg p-0 bg-background flex flex-col"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {/* Compact Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-base font-semibold">
-            {editMode ? "Edit post" : "Create post"}
-          </DialogTitle>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5 text-muted-foreground" />
-          </button>
+        {/* Compact Header with Media Buttons */}
+        <div className="flex flex-col border-b border-border flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <DialogTitle className="text-base font-semibold flex-1">
+              {editMode ? "Edit post" : "Create post"}
+            </DialogTitle>
+            <div className="flex items-center gap-2">
+              <Button 
+                type="submit" 
+                onClick={handleSubmit}
+                disabled={!content.trim() || remainingChars < 0 || uploading} 
+                className="rounded-full h-9 px-4 text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+              >
+                {uploading ? "Posting…" : editMode ? "Update" : "Post"}
+              </Button>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 text-muted-foreground" />
+            </button>
+            </div>
+          </div>
+          {/* Media Options at Top */}
+          <div className="flex items-center gap-2 px-4 pb-3">
+            <label htmlFor="image-upload" className="cursor-pointer">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full hover:bg-secondary transition-colors touch-manipulation"
+                onClick={() => document.getElementById('image-upload')?.click()}
+                aria-label="Upload image"
+                title="Add Photo"
+                disabled={uploading}
+              >
+                <ImageIcon className="h-5 w-5 text-primary" />
+              </Button>
+            </label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-secondary transition-colors touch-manipulation"
+              onClick={handleCameraCapture}
+              aria-label="Take photo"
+              title="Camera"
+              disabled={uploading}
+            >
+              <Camera className="h-5 w-5 text-primary" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-secondary transition-colors touch-manipulation"
+              onClick={() => setGifPickerOpen(true)}
+              aria-label="Search GIFs"
+              title="GIF"
+              disabled={uploading}
+            >
+              <FileVideo className="h-5 w-5 text-primary" />
+            </Button>
+            <Input
+              id="image-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </div>
         </div>
 
         {/* Scrollable Content */}
@@ -305,13 +365,7 @@ export const PostForm = ({
                   placeholder="Enter name..."
                   value={fictionalName}
                   onChange={(e) => setFictionalName(e.target.value.slice(0, 30))}
-                  className="mt-2 h-9 text-sm"
-                  onFocus={() => {
-                    // Prevent glitches by ensuring smooth scroll
-                    setTimeout(() => {
-                      fictionalNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }, 100);
-                  }}
+                  className="mt-2 h-10 text-[16px] sm:h-9 sm:text-sm"
                 />
               )}
             </div>
@@ -325,13 +379,7 @@ export const PostForm = ({
                 value={hashtagInput}
                 onChange={(e) => setHashtagInput(e.target.value)}
                 disabled={lockHashtag}
-                className="h-9 text-sm"
-                onFocus={() => {
-                  // Prevent glitches by ensuring smooth scroll
-                  setTimeout(() => {
-                    hashtagInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  }, 100);
-                }}
+                className="h-10 text-[16px] sm:h-9 sm:text-sm"
               />
               {lockHashtag && (
                 <p className="text-xs text-muted-foreground">
@@ -342,82 +390,34 @@ export const PostForm = ({
           </form>
         </div>
 
-        {/* Fixed Bottom Bar - Always Visible */}
+        {/* Fixed Bottom Bar - Post Button Always Visible */}
         <div className="border-t border-border bg-background px-4 py-3 flex-shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            {/* Media Options */}
-            <div className="flex items-center gap-1">
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full hover:bg-secondary transition-colors touch-manipulation"
-                  onClick={() => document.getElementById('image-upload')?.click()}
-                  aria-label="Upload image"
-                  disabled={uploading}
-                >
-                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                </Button>
-              </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full hover:bg-secondary transition-colors touch-manipulation"
-                onClick={handleCameraCapture}
-                aria-label="Take photo"
-                disabled={uploading}
-              >
-                <Camera className="h-5 w-5 text-muted-foreground" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full hover:bg-secondary transition-colors touch-manipulation"
-                onClick={() => setGifPickerOpen(true)}
-                aria-label="Search GIFs"
-                disabled={uploading}
-              >
-                <FileVideo className="h-5 w-5 text-muted-foreground" />
-              </Button>
-              <Input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-            </div>
-
-            {/* Character Count & Post Button - Always Visible */}
-            <div className="flex items-center gap-2">
-              {remainingChars < 500 && (
-                <span className={`text-xs font-medium ${
-                  remainingChars < 100 ? "text-destructive" : 
-                  remainingChars < 500 ? "text-yellow-600" : 
-                  "text-muted-foreground"
-                }`}>
-                  {remainingChars}
+          <div className="flex items-center justify-end gap-2">
+            {/* Character Count & Post Button */}
+            {remainingChars < 500 && (
+              <span className={`text-xs font-medium ${
+                remainingChars < 100 ? "text-destructive" : 
+                remainingChars < 500 ? "text-yellow-600" : 
+                "text-muted-foreground"
+              }`}>
+                {remainingChars}
+              </span>
+            )}
+            <Button 
+              type="submit" 
+              onClick={handleSubmit}
+              disabled={!content.trim() || remainingChars < 0 || uploading} 
+              className="rounded-full h-9 px-4 text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+            >
+              {uploading ? (
+                <span className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 animate-spin" />
+                  <span className="hidden sm:inline">Posting...</span>
                 </span>
+              ) : (
+                editMode ? "Update" : "Post"
               )}
-              <Button 
-                type="submit" 
-                onClick={handleSubmit}
-                disabled={!content.trim() || remainingChars < 0 || uploading} 
-                className="rounded-full h-9 px-4 text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-              >
-                {uploading ? (
-                  <span className="flex items-center gap-2">
-                    <Upload className="w-4 h-4 animate-spin" />
-                    <span className="hidden sm:inline">Posting...</span>
-                  </span>
-                ) : (
-                  editMode ? "Update" : "Post"
-                )}
-              </Button>
-            </div>
+            </Button>
           </div>
         </div>
 
